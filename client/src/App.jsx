@@ -22,7 +22,7 @@ export default function App() {
     spots,
     loading: spotsLoading,
     loadSpots,
-    generateGrid,
+    generateFromPath,
     clearSpots,
   } = useSpots();
 
@@ -34,7 +34,14 @@ export default function App() {
     updateAssignments,
   } = usePlacements();
 
-  // Load initial data
+  // Street path state
+  const [paths, setPaths] = useState([]);
+  const [streetDrawMode, setStreetDrawMode] = useState(false);
+  const [streetParams, setStreetParams] = useState({ spotSizeFt: 12 });
+
+  const [pathLabelIdx, setPathLabelIdx] = useState(0);
+  const LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
   useEffect(() => {
     loadVendors();
     loadSpots();
@@ -45,8 +52,42 @@ export default function App() {
     clearPlacements();
   };
 
+  const handleToggleStreetDraw = (params) => {
+    if (streetDrawMode) {
+      setStreetDrawMode(false);
+    } else {
+      setStreetParams(params);
+      setStreetDrawMode(true);
+    }
+  };
+
+  const handlePathDrawn = useCallback(
+    async (coords) => {
+      setPaths((prev) => [...prev, coords]);
+      setStreetDrawMode(false);
+
+      const label = LABELS[pathLabelIdx % LABELS.length];
+      setPathLabelIdx((prev) => prev + 1);
+
+      await generateFromPath({
+        path: coords,
+        spotSizeFt: streetParams.spotSizeFt,
+        spacingFt: 2,
+        label,
+      });
+    },
+    [streetParams, pathLabelIdx, generateFromPath]
+  );
+
+  const handleClearPaths = () => {
+    setPaths([]);
+    setPathLabelIdx(0);
+  };
+
   const handleClearGrid = async () => {
     await clearSpots();
+    setPaths([]);
+    setPathLabelIdx(0);
     clearPlacements();
   };
 
@@ -78,7 +119,6 @@ export default function App() {
 
   return (
     <div className="app-layout">
-      {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-header">
           <h1>Vendor Placer</h1>
@@ -94,13 +134,16 @@ export default function App() {
         <div className="sidebar-section">
           <h3>Actions</h3>
           <PlacementControls
-            onGenerateGrid={generateGrid}
             onRunPlacement={runPlacement}
             onClearVendors={handleClearVendors}
             onClearGrid={handleClearGrid}
             loading={loading}
             spotCount={spots?.features?.length || 0}
             filledCount={Object.keys(placements.assignments || {}).length}
+            streetDrawMode={streetDrawMode}
+            onToggleStreetDraw={handleToggleStreetDraw}
+            onClearPaths={handleClearPaths}
+            pathCount={paths.length}
           />
         </div>
 
@@ -121,13 +164,15 @@ export default function App() {
         </div>
       </aside>
 
-      {/* Map */}
       <main className="map-area">
         <MapView
           spots={spots}
           vendors={vendors}
           assignments={placements.assignments}
           selectedSpotId={selectedSpotId}
+          paths={paths}
+          onPathDrawn={handlePathDrawn}
+          streetDrawMode={streetDrawMode}
         />
       </main>
     </div>

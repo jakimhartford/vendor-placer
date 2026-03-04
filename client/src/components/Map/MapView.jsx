@@ -2,9 +2,10 @@ import React from 'react';
 import { MapContainer, TileLayer } from 'react-leaflet';
 import { MAP_CENTER, DEFAULT_ZOOM } from '../../utils/constants.js';
 import SpotLayer from './SpotLayer.jsx';
+import DrawToolbar from './DrawToolbar.jsx';
 import FitBounds from './FitBounds.jsx';
 
-export default function MapView({ spots, vendors, assignments, selectedSpotId }) {
+export default function MapView({ spots, vendors, assignments, selectedSpotId, paths, onPathDrawn, streetDrawMode }) {
   return (
     <MapContainer
       center={MAP_CENTER}
@@ -25,6 +26,11 @@ export default function MapView({ spots, vendors, assignments, selectedSpotId })
         vendors={vendors}
         assignments={assignments}
         selectedSpotId={selectedSpotId}
+        paths={paths}
+      />
+      <DrawToolbar
+        onPathDrawn={onPathDrawn}
+        streetDrawMode={streetDrawMode}
       />
     </MapContainer>
   );
