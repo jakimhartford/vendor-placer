@@ -1,0 +1,20 @@
+{
+  "type": "FeatureCollection",
+  "features": [],
+  "metadata": {
+    "festivalAreas": [
+      {
+        "name": "Beach St",
+        "bounds": [[29.2080, -81.0278], [29.2098, -81.0195]],
+        "description": "Main festival strip along Beach Street, Bay St to Orange Ave"
+      },
+      {
+        "name": "Magnolia",
+        "bounds": [[29.2055, -81.0222], [29.2080, -81.0212]],
+        "description": "Secondary festival area along Magnolia Ave, south of Beach St"
+      }
+    ],
+    "mapCenter": [29.2078, -81.0230],
+    "defaultZoom": 17
+  }
+}
