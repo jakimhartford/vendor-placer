@@ -85,6 +85,7 @@ export default function App() {
             onRunPlacement={runPlacement}
             onClearVendors={handleClearVendors}
             loading={loading}
+            spotCount={spots?.features?.length || 0}
           />
         </div>
 

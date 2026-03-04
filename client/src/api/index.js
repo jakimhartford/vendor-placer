@@ -18,6 +18,14 @@ export function clearVendors() {
   return api.delete('/api/vendors').then((res) => res.data);
 }
 
+export function fetchSampleList() {
+  return api.get('/api/vendors/samples').then((res) => res.data);
+}
+
+export function fetchSampleCsv(filename) {
+  return api.get(`/api/vendors/samples/${filename}`).then((res) => res.data);
+}
+
 // ---------- Spots ----------
 
 export function fetchSpots() {
@@ -25,7 +33,7 @@ export function fetchSpots() {
 }
 
 export function saveSpots(geojson) {
-  return api.post('/api/spots', geojson).then((res) => res.data);
+  return api.put('/api/spots', geojson).then((res) => res.data);
 }
 
 export function generateGrid(params) {

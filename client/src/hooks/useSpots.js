@@ -28,10 +28,8 @@ export default function useSpots() {
   const saveSpots = useCallback(async (geojson) => {
     setLoading(true);
     try {
-      const data = await apiSaveSpots(geojson);
-      setSpots(
-        data && data.type === 'FeatureCollection' ? data : geojson
-      );
+      await apiSaveSpots(geojson);
+      setSpots(geojson);
     } catch {
       // keep local state
     } finally {
@@ -43,10 +41,15 @@ export default function useSpots() {
     async (params) => {
       setLoading(true);
       try {
-        await apiGenerateGrid(params);
-        await loadSpots();
-      } catch {
-        // ignore
+        const data = await apiGenerateGrid(params);
+        // Response includes spotsGeoJSON directly
+        if (data.spotsGeoJSON && data.spotsGeoJSON.type === 'FeatureCollection') {
+          setSpots(data.spotsGeoJSON);
+        } else {
+          await loadSpots();
+        }
+      } catch (err) {
+        console.error('generateGrid error:', err);
       } finally {
         setLoading(false);
       }
