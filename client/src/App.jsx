@@ -229,6 +229,18 @@ export default function App() {
     ? spots?.features?.find((f) => f.properties?.id === editingSpotId) || null
     : null;
 
+  const handleReassign = useCallback((vendorId, newSpotId) => {
+    const current = { ...(placements.assignments || {}) };
+    for (const [spotId, vid] of Object.entries(current)) {
+      if (vid === vendorId) {
+        delete current[spotId];
+        break;
+      }
+    }
+    current[newSpotId] = vendorId;
+    updateAssignments(current);
+  }, [placements, updateAssignments]);
+
   const handleSpotClick = useCallback((feature, event) => {
     const spotId = feature.properties?.id;
 
@@ -301,18 +313,6 @@ export default function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-
-  const handleReassign = useCallback((vendorId, newSpotId) => {
-    const current = { ...(placements.assignments || {}) };
-    for (const [spotId, vid] of Object.entries(current)) {
-      if (vid === vendorId) {
-        delete current[spotId];
-        break;
-      }
-    }
-    current[newSpotId] = vendorId;
-    updateAssignments(current);
-  }, [placements, updateAssignments]);
 
   const loading = vendorsLoading || spotsLoading || placementsLoading || projectsLoading;
 
