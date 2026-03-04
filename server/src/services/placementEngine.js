@@ -134,14 +134,36 @@ export function runPlacement(vendors, spotsGeoJSON) {
   const conflicts = [];
 
   function tryAssign(vendor, spotList) {
+    const boothsNeeded = vendor.booths || 1;
     for (const spot of spotList) {
       if (usedSpotIds.has(spot.id)) continue;
       const result = canPlace(vendor, spot, adjacencyMap, assignmentMap, nameMap);
       if (result.allowed) {
+        // Assign primary spot
         assignments[spot.id] = vendor.id;
         usedSpotIds.add(spot.id);
         assignmentMap.set(spot.id, vendor);
         assignedVendorIds.add(vendor.id);
+
+        // For multi-booth vendors, claim adjacent spots
+        if (boothsNeeded >= 2) {
+          let extraAssigned = 0;
+          const neighbors = adjacencyMap.get(spot.id) || new Set();
+          for (const nId of neighbors) {
+            if (extraAssigned >= boothsNeeded - 1) break;
+            if (usedSpotIds.has(nId)) continue;
+            // Find the neighbor spot properties
+            const nSpot = spotProps.find((s) => s.id === nId);
+            if (!nSpot) continue;
+            const nResult = canPlace(vendor, nSpot, adjacencyMap, assignmentMap, nameMap);
+            if (nResult.allowed) {
+              assignments[nId] = vendor.id;
+              usedSpotIds.add(nId);
+              assignmentMap.set(nId, vendor);
+              extraAssigned++;
+            }
+          }
+        }
         return true;
       }
     }

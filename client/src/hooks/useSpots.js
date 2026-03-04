@@ -5,6 +5,7 @@ import {
   generateGrid as apiGenerateGrid,
   generateFromPath as apiGenerateFromPath,
   clearSpots as apiClearSpots,
+  addSingleSpot as apiAddSingleSpot,
 } from '../api/index.js';
 
 const EMPTY_FC = { type: 'FeatureCollection', features: [] };
@@ -90,5 +91,21 @@ export default function useSpots() {
     }
   }, []);
 
-  return { spots, loading, loadSpots, saveSpots, generateGrid, generateFromPath, clearSpots };
+  const addSingleSpot = useCallback(async ({ lng, lat, label }) => {
+    setLoading(true);
+    try {
+      const data = await apiAddSingleSpot({ lng, lat, label });
+      if (data.spotsGeoJSON && data.spotsGeoJSON.type === 'FeatureCollection') {
+        setSpots(data.spotsGeoJSON);
+      } else {
+        await loadSpots();
+      }
+    } catch (err) {
+      console.error('addSingleSpot error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [loadSpots]);
+
+  return { spots, loading, loadSpots, saveSpots, generateGrid, generateFromPath, clearSpots, addSingleSpot, setSpots };
 }

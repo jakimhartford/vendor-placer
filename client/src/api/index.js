@@ -48,6 +48,10 @@ export function generateFromPath(params) {
   return api.post('/api/spots/generate-from-path', params).then((res) => res.data);
 }
 
+export function addSingleSpot(params) {
+  return api.post('/api/spots/add-single', params).then((res) => res.data);
+}
+
 // ---------- Placements ----------
 
 export function runPlacement() {
@@ -56,6 +60,28 @@ export function runPlacement() {
 
 export function fetchPlacements() {
   return api.get('/api/placements').then((res) => res.data);
+}
+
+// ---------- Projects ----------
+
+export function fetchProjects() {
+  return api.get('/api/projects').then((res) => res.data);
+}
+
+export function fetchProject(id) {
+  return api.get(`/api/projects/${id}`).then((res) => res.data);
+}
+
+export function createProject(data) {
+  return api.post('/api/projects', data).then((res) => res.data);
+}
+
+export function updateProject(id, data) {
+  return api.put(`/api/projects/${id}`, data).then((res) => res.data);
+}
+
+export function deleteProject(id) {
+  return api.delete(`/api/projects/${id}`).then((res) => res.data);
 }
 
 export default api;

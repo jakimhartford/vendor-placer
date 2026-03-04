@@ -1,51 +1,51 @@
-name,category,tier,exclusions,conflicts,premium
-Indigo Wave Studios,art,platinum,,,yes
-Saltwater Ceramics,craft,gold,,Driftwood & Clay Co,yes
-Palmetto Printworks,art,silver,,,
-Driftwood & Clay Co,craft,silver,,Saltwater Ceramics,
-Coastline Kettle Corn,food,bronze,,,
-Banyan Street Jewelers,jewelry,gold,,,yes
-Hula Hoop Hannah,services,bronze,,Face Paint Frenzy,
-Face Paint Frenzy,services,silver,,Hula Hoop Hannah,
-Sawgrass Leather Co,craft,bronze,,,
-Tidal Ink Tattoos,services,platinum,cat:services,,yes
-Coral Reef Canvas,art,gold,,,yes
-Mangrove Metal Works,jewelry,silver,,,
-Shell & Stone Designs,jewelry,bronze,,Banyan Street Jewelers,
-A1A Smoke Shack,food,silver,,Coastline Kettle Corn,
-Pier Pressure Art,art,bronze,,,
-Riverwalk Pottery,craft,gold,,,
-Nova Streetwear,clothing,platinum,,,yes
-Beachside Batik,clothing,silver,,,
-Flagler Fudge Factory,food,gold,,,yes
-Ormond Origami,craft,bronze,,,
-Volusia Vintage,clothing,bronze,,,
-Seabreeze Soaps,craft,silver,,,
-Old Florida Watercolors,art,silver,,,
-Lazy River Lemonade,food,bronze,,,
-Ponce Inlet Pottery,craft,bronze,,Riverwalk Pottery,
-Daytona Dough Co,food,silver,,,
-Salty Dog Bandanas,other,bronze,,,
-Island Time Illustrations,art,bronze,,,
-Tropical Twist Jewelry,jewelry,gold,,,
-Neptune's Knots,craft,silver,,,
-Palmetto Hat Co,clothing,silver,,,
-Boardwalk Bead Studio,jewelry,bronze,,,
-Manatee Mike's BBQ,food,platinum,,,yes
-Sandcastle Silks,clothing,bronze,,,
-Live Oak Leather,craft,gold,,Sawgrass Leather Co,yes
-Sunrise Smoothie Bar,food,silver,,,
-Dune Buggy Designs,art,gold,,,
-Halifax Harbor Glass,craft,silver,,,
-The Painted Pelican,art,bronze,,,
-Tomoka Tie Dye,clothing,silver,,,
-Mosquito Lagoon Maps,other,bronze,,,
-Inlet Iron Works,jewelry,silver,,,
-Coquina Rock Art,art,silver,,,
-Port Orange Pretzels,food,bronze,,,
-Oceanfront Oils,art,gold,,,
-Smyrna Stained Glass,craft,platinum,,,yes
-Disappearing Island Co,other,silver,,,
-Ponce de Leon Prints,art,bronze,,,
-Angell & Phelps Fudge,food,silver,,Flagler Fudge Factory,
-Jackie Robinson Murals,art,platinum,,,yes
+name,category,tier,exclusions,conflicts,premium,booths
+Indigo Wave Studios,art,platinum,,,yes,2
+Saltwater Ceramics,craft,gold,,Driftwood & Clay Co,yes,1
+Palmetto Printworks,art,silver,,,,1
+Driftwood & Clay Co,craft,silver,,Saltwater Ceramics,,1
+Coastline Kettle Corn,food,bronze,,,,1
+Banyan Street Jewelers,jewelry,gold,,,yes,1
+Hula Hoop Hannah,services,bronze,,Face Paint Frenzy,,1
+Face Paint Frenzy,services,silver,,Hula Hoop Hannah,,1
+Sawgrass Leather Co,craft,bronze,,,,1
+Tidal Ink Tattoos,services,platinum,cat:services,,yes,2
+Coral Reef Canvas,art,gold,,,yes,1
+Mangrove Metal Works,jewelry,silver,,,,1
+Shell & Stone Designs,jewelry,bronze,,Banyan Street Jewelers,,1
+A1A Smoke Shack,food,silver,,Coastline Kettle Corn,,1
+Pier Pressure Art,art,bronze,,,,1
+Riverwalk Pottery,craft,gold,,,,1
+Nova Streetwear,clothing,platinum,,,yes,2
+Beachside Batik,clothing,silver,,,,1
+Flagler Fudge Factory,food,gold,,,yes,2
+Ormond Origami,craft,bronze,,,,1
+Volusia Vintage,clothing,bronze,,,,1
+Seabreeze Soaps,craft,silver,,,,1
+Old Florida Watercolors,art,silver,,,,1
+Lazy River Lemonade,food,bronze,,,,1
+Ponce Inlet Pottery,craft,bronze,,Riverwalk Pottery,,1
+Daytona Dough Co,food,silver,,,,1
+Salty Dog Bandanas,other,bronze,,,,1
+Island Time Illustrations,art,bronze,,,,1
+Tropical Twist Jewelry,jewelry,gold,,,,1
+Neptune's Knots,craft,silver,,,,1
+Palmetto Hat Co,clothing,silver,,,,1
+Boardwalk Bead Studio,jewelry,bronze,,,,1
+Manatee Mike's BBQ,food,platinum,,,yes,2
+Sandcastle Silks,clothing,bronze,,,,1
+Live Oak Leather,craft,gold,,Sawgrass Leather Co,yes,1
+Sunrise Smoothie Bar,food,silver,,,,1
+Dune Buggy Designs,art,gold,,,,1
+Halifax Harbor Glass,craft,silver,,,,1
+The Painted Pelican,art,bronze,,,,1
+Tomoka Tie Dye,clothing,silver,,,,1
+Mosquito Lagoon Maps,other,bronze,,,,1
+Inlet Iron Works,jewelry,silver,,,,1
+Coquina Rock Art,art,silver,,,,1
+Port Orange Pretzels,food,bronze,,,,1
+Oceanfront Oils,art,gold,,,,1
+Smyrna Stained Glass,craft,platinum,,,yes,1
+Disappearing Island Co,other,silver,,,,1
+Ponce de Leon Prints,art,bronze,,,,1
+Angell & Phelps Fudge,food,silver,,Flagler Fudge Factory,,1
+Jackie Robinson Murals,art,platinum,,,yes,1

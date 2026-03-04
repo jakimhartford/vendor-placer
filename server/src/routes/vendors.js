@@ -19,6 +19,11 @@ export function getVendors() {
   return vendors;
 }
 
+/** Replace vendors in-memory (used by projects) */
+export function setVendors(v) {
+  vendors = v;
+}
+
 // POST /api/vendors/upload — parse CSV and store vendors
 vendorRoutes.post('/upload', (req, res) => {
   try {

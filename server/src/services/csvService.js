@@ -57,7 +57,10 @@ export function parseVendorCsv(csvString) {
     const premiumRaw = (row.premium || '').trim().toLowerCase();
     const premium = premiumRaw === 'yes' || premiumRaw === 'true' || premiumRaw === '1';
 
-    return { name, category, tier, exclusions, conflicts, premium };
+    // Booths: number of spots this vendor needs (default 1)
+    const booths = Math.max(1, parseInt(row.booths, 10) || 1);
+
+    return { name, category, tier, exclusions, conflicts, premium, booths };
   });
 
   return vendors;

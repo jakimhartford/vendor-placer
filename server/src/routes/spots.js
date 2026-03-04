@@ -19,6 +19,11 @@ export function getSpots() {
   return spotsGeoJSON;
 }
 
+/** Replace spots in-memory (used by projects) */
+export function setSpots(geojson) {
+  spotsGeoJSON = geojson;
+}
+
 // ──────────────────────────────────────────────
 // Festival area definitions
 // ──────────────────────────────────────────────
@@ -369,6 +374,45 @@ spotRoutes.post('/generate-grid', (req, res) => {
   return res.json({
     message: `Generated ${features.length} spots for area "${area}"`,
     count: features.length,
+    spotsGeoJSON,
+  });
+});
+
+// POST /api/spots/add-single — place a single spot at a clicked location
+spotRoutes.post('/add-single', (req, res) => {
+  const { lng, lat, label } = req.body;
+  if (typeof lng !== 'number' || typeof lat !== 'number') {
+    return res.status(400).json({ error: 'lng and lat are required numbers' });
+  }
+
+  const existingCount = spotsGeoJSON.features?.length || 0;
+  const spotLabel = label || `P${String(existingCount + 1).padStart(2, '0')}`;
+
+  const feature = {
+    type: 'Feature',
+    geometry: makeSpotPolygon(lat, lng),
+    properties: {
+      id: crypto.randomUUID(),
+      label: spotLabel,
+      isCorner: false,
+      trafficScore: 5,
+      side: 'manual',
+      row: 1,
+      col: existingCount + 1,
+      area: 'manual',
+      assignedVendorId: null,
+    },
+  };
+
+  const existingFeatures = spotsGeoJSON?.features || [];
+  spotsGeoJSON = {
+    type: 'FeatureCollection',
+    features: [...existingFeatures, feature],
+    metadata: spotsGeoJSON.metadata || {},
+  };
+
+  return res.json({
+    message: `Added spot "${spotLabel}"`,
     spotsGeoJSON,
   });
 });

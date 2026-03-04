@@ -2,11 +2,13 @@ import React, { useEffect, useState, useCallback } from 'react';
 import useVendors from './hooks/useVendors.js';
 import useSpots from './hooks/useSpots.js';
 import usePlacements from './hooks/usePlacements.js';
+import useProjects from './hooks/useProjects.js';
 import MapView from './components/Map/MapView.jsx';
 import CsvUploader from './components/Vendors/CsvUploader.jsx';
 import VendorTable from './components/Vendors/VendorTable.jsx';
 import PlacementControls from './components/Placement/PlacementControls.jsx';
 import PlacementStats from './components/Placement/PlacementStats.jsx';
+import ProjectBar from './components/Projects/ProjectBar.jsx';
 
 export default function App() {
   const {
@@ -24,6 +26,8 @@ export default function App() {
     loadSpots,
     generateFromPath,
     clearSpots,
+    addSingleSpot,
+    setSpots: setSpotsLocal,
   } = useSpots();
 
   const {
@@ -34,10 +38,24 @@ export default function App() {
     updateAssignments,
   } = usePlacements();
 
+  const {
+    projects,
+    currentProjectId,
+    loading: projectsLoading,
+    loadProjects,
+    loadProject,
+    saveNewProject,
+    saveProject,
+    removeProject,
+  } = useProjects();
+
   // Street path state
   const [paths, setPaths] = useState([]);
   const [streetDrawMode, setStreetDrawMode] = useState(false);
   const [streetParams, setStreetParams] = useState({ spotSizeFt: 12 });
+
+  // Spot place mode (click to place individual spots)
+  const [spotPlaceMode, setSpotPlaceMode] = useState(false);
 
   const [pathLabelIdx, setPathLabelIdx] = useState(0);
   const LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
@@ -45,7 +63,37 @@ export default function App() {
   useEffect(() => {
     loadVendors();
     loadSpots();
-  }, [loadVendors, loadSpots]);
+    loadProjects();
+  }, [loadVendors, loadSpots, loadProjects]);
+
+  // Project handlers
+  const handleLoadProject = useCallback(async (id) => {
+    const data = await loadProject(id);
+    if (data) {
+      // Refresh all in-memory state from server (which was restored by the GET)
+      await loadVendors();
+      await loadSpots();
+      // Restore client-only state
+      setPaths(data.paths || []);
+      setPathLabelIdx(data.paths?.length || 0);
+      if (data.placements) {
+        const raw = data.placements.assignments || {};
+        updateAssignments(Array.isArray(raw) ? Object.fromEntries(raw.map((a) => [a.spotId, a.vendorId])) : raw);
+      }
+    }
+  }, [loadProject, loadVendors, loadSpots, updateAssignments]);
+
+  const handleSaveNewProject = useCallback(async (name) => {
+    await saveNewProject({ name, paths });
+  }, [saveNewProject, paths]);
+
+  const handleSaveProject = useCallback(async (id) => {
+    await saveProject(id, { paths });
+  }, [saveProject, paths]);
+
+  const handleDeleteProject = useCallback(async (id) => {
+    await removeProject(id);
+  }, [removeProject]);
 
   const handleClearVendors = async () => {
     await clearVendors();
@@ -84,6 +132,19 @@ export default function App() {
     setPathLabelIdx(0);
   };
 
+  const handleSpotPlaced = useCallback(async ({ lat, lng }) => {
+    await addSingleSpot({ lat, lng });
+  }, [addSingleSpot]);
+
+  const handleToggleSpotPlace = () => {
+    if (spotPlaceMode) {
+      setSpotPlaceMode(false);
+    } else {
+      setStreetDrawMode(false);
+      setSpotPlaceMode(true);
+    }
+  };
+
   const handleClearGrid = async () => {
     await clearSpots();
     setPaths([]);
@@ -115,7 +176,7 @@ export default function App() {
     updateAssignments(current);
   }, [placements, updateAssignments]);
 
-  const loading = vendorsLoading || spotsLoading || placementsLoading;
+  const loading = vendorsLoading || spotsLoading || placementsLoading || projectsLoading;
 
   return (
     <div className="app-layout">
@@ -123,6 +184,15 @@ export default function App() {
         <div className="sidebar-header">
           <h1>Vendor Placer</h1>
           <p>Event vendor placement tool</p>
+          <ProjectBar
+            projects={projects}
+            currentProjectId={currentProjectId}
+            loading={projectsLoading}
+            onLoad={handleLoadProject}
+            onSaveNew={handleSaveNewProject}
+            onSave={handleSaveProject}
+            onDelete={handleDeleteProject}
+          />
         </div>
 
         <div className="sidebar-section">
@@ -144,6 +214,10 @@ export default function App() {
             onToggleStreetDraw={handleToggleStreetDraw}
             onClearPaths={handleClearPaths}
             pathCount={paths.length}
+            spotPlaceMode={spotPlaceMode}
+            onToggleSpotPlace={handleToggleSpotPlace}
+            vendors={vendors}
+            placements={placements}
           />
         </div>
 
@@ -173,6 +247,8 @@ export default function App() {
           paths={paths}
           onPathDrawn={handlePathDrawn}
           streetDrawMode={streetDrawMode}
+          spotPlaceMode={spotPlaceMode}
+          onSpotPlaced={handleSpotPlaced}
         />
       </main>
     </div>

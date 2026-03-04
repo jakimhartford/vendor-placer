@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 
 export default function PlacementControls({
   onRunPlacement,
@@ -11,9 +11,22 @@ export default function PlacementControls({
   onToggleStreetDraw,
   onClearPaths,
   pathCount,
+  spotPlaceMode,
+  onToggleSpotPlace,
+  vendors,
+  placements,
 }) {
   const [spotSizeFt, setSpotSizeFt] = useState(12);
   const vacantCount = spotCount - (filledCount || 0);
+
+  // Total booths needed by all vendors
+  const totalBoothsNeeded = useMemo(() => {
+    if (!vendors?.length) return 0;
+    return vendors.reduce((sum, v) => sum + (v.booths || 1), 0);
+  }, [vendors]);
+
+  const spotsShortage = totalBoothsNeeded > 0 && spotCount > 0 && totalBoothsNeeded > spotCount;
+  const unplacedCount = placements?.unplaced?.length || 0;
 
   return (
     <div>
@@ -57,18 +70,34 @@ export default function PlacementControls({
         />
       </div>
 
-      <button
-        className="btn"
-        disabled={loading}
-        onClick={() => onToggleStreetDraw({ spotSizeFt })}
-        style={{
-          background: streetDrawMode ? '#dc2626' : '#facc15',
-          color: streetDrawMode ? '#fff' : '#000',
-          fontWeight: 600,
-        }}
-      >
-        {streetDrawMode ? 'Cancel Drawing' : 'Draw Street'}
-      </button>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 0 }}>
+        <button
+          className="btn"
+          disabled={loading}
+          onClick={() => onToggleStreetDraw({ spotSizeFt })}
+          style={{
+            flex: 1,
+            background: streetDrawMode ? '#dc2626' : '#facc15',
+            color: streetDrawMode ? '#fff' : '#000',
+            fontWeight: 600,
+          }}
+        >
+          {streetDrawMode ? 'Cancel Drawing' : 'Draw Street'}
+        </button>
+        <button
+          className="btn"
+          disabled={loading}
+          onClick={onToggleSpotPlace}
+          style={{
+            flex: 1,
+            background: spotPlaceMode ? '#dc2626' : '#22d3ee',
+            color: spotPlaceMode ? '#fff' : '#000',
+            fontWeight: 600,
+          }}
+        >
+          {spotPlaceMode ? 'Stop Placing' : 'Place Spot'}
+        </button>
+      </div>
 
       {pathCount > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -97,6 +126,35 @@ export default function PlacementControls({
       )}
 
       <hr style={{ border: 'none', borderTop: '1px solid #334155', margin: '10px 0' }} />
+
+      {/* Warnings */}
+      {spotsShortage && (
+        <div style={{
+          background: '#7f1d1d',
+          border: '1px solid #dc2626',
+          borderRadius: 6,
+          padding: '6px 10px',
+          marginBottom: 8,
+          fontSize: 11,
+          color: '#fca5a5',
+        }}>
+          Not enough spots: {totalBoothsNeeded} booths needed, only {spotCount} spot{spotCount !== 1 ? 's' : ''} available
+        </div>
+      )}
+
+      {unplacedCount > 0 && (
+        <div style={{
+          background: '#78350f',
+          border: '1px solid #f59e0b',
+          borderRadius: 6,
+          padding: '6px 10px',
+          marginBottom: 8,
+          fontSize: 11,
+          color: '#fde68a',
+        }}>
+          {unplacedCount} vendor{unplacedCount !== 1 ? 's' : ''} could not be placed
+        </div>
+      )}
 
       {/* Placement */}
       <button

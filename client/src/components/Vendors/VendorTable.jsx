@@ -16,7 +16,7 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
   const [editingVendorId, setEditingVendorId] = useState(null);
   const [filterUnplaced, setFilterUnplaced] = useState(false);
 
-  // Build vendorId -> { spotId, spotLabel } map
+  // Build vendorId -> { spotId, spotLabel, allSpots } map
   const vendorSpotMap = useMemo(() => {
     const map = {};
     if (assignments && spots?.features) {
@@ -30,7 +30,12 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
         }
       });
       Object.entries(assignments).forEach(([spotId, vendorId]) => {
-        map[vendorId] = spotMap[spotId] || { label: spotId, id: spotId };
+        const spotInfo = spotMap[spotId] || { label: spotId, id: spotId };
+        if (map[vendorId]) {
+          map[vendorId].allSpots.push(spotInfo);
+        } else {
+          map[vendorId] = { ...spotInfo, allSpots: [spotInfo] };
+        }
       });
     }
     return map;
@@ -194,6 +199,19 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {v.name}
                       </span>
+                      {(v.booths || 1) >= 2 && (
+                        <span title={`${v.booths} booths`} style={{
+                          fontSize: 8,
+                          background: '#7c3aed',
+                          color: '#fff',
+                          padding: '1px 4px',
+                          borderRadius: 3,
+                          fontWeight: 700,
+                          flexShrink: 0,
+                        }}>
+                          {v.booths}x
+                        </span>
+                      )}
                       {isPremium && (
                         <span title="Premium spot purchased" style={{ fontSize: 9, color: '#facc15', flexShrink: 0 }}>
                           ★
@@ -262,7 +280,7 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
                           gap: 4,
                         }}
                       >
-                        <span>{spotInfo?.label || '—'}</span>
+                        <span>{spotInfo?.allSpots ? spotInfo.allSpots.map((s) => s.label).join(', ') : '—'}</span>
                         {onReassign && (
                           <button
                             title={isPlaced ? 'Reassign spot' : 'Assign spot'}

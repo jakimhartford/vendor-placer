@@ -8,6 +8,16 @@ export const placementRoutes = Router();
 // Store last placement result
 let lastResult = null;
 
+/** Get last placement result (used by projects) */
+export function getPlacements() {
+  return lastResult;
+}
+
+/** Set placement result (used by projects) */
+export function setPlacements(result) {
+  lastResult = result;
+}
+
 // POST /api/placements/run — run placement engine
 placementRoutes.post('/run', (_req, res) => {
   try {

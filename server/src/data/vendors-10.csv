@@ -1,11 +1,11 @@
-name,category,tier,exclusions,conflicts,premium
-Indigo Wave Studios,art,platinum,,,yes
-Saltwater Ceramics,craft,gold,,Driftwood & Clay Co,yes
-Palmetto Printworks,art,silver,,,
-Driftwood & Clay Co,craft,silver,,Saltwater Ceramics,
-Coastline Kettle Corn,food,bronze,,,
-Banyan Street Jewelers,jewelry,gold,,,yes
-Hula Hoop Hannah,services,bronze,,Face Paint Frenzy,
-Face Paint Frenzy,services,silver,,Hula Hoop Hannah,
-Sawgrass Leather Co,craft,bronze,,,
-Tidal Ink Tattoos,services,platinum,cat:services,,yes
+name,category,tier,exclusions,conflicts,premium,booths
+Indigo Wave Studios,art,platinum,,,yes,2
+Saltwater Ceramics,craft,gold,,Driftwood & Clay Co,yes,1
+Palmetto Printworks,art,silver,,,,1
+Driftwood & Clay Co,craft,silver,,Saltwater Ceramics,,1
+Coastline Kettle Corn,food,bronze,,,,1
+Banyan Street Jewelers,jewelry,gold,,,yes,1
+Hula Hoop Hannah,services,bronze,,Face Paint Frenzy,,1
+Face Paint Frenzy,services,silver,,Hula Hoop Hannah,,1
+Sawgrass Leather Co,craft,bronze,,,,1
+Tidal Ink Tattoos,services,platinum,cat:services,,yes,2
