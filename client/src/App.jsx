@@ -81,8 +81,6 @@ export default function App() {
         path: coords,
         spotSizeFt: streetParams.spotSizeFt,
         spacingFt: 2,
-        rows: streetParams.rows,
-        offsetFt: 15,
         label,
       });
     },

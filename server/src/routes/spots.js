@@ -234,7 +234,7 @@ function makeRotatedSpotRect(centerLng, centerLat, halfSizeFt, tangentLng, tange
   };
 }
 
-function generateSpotsFromPath(path, { spotSizeFt = 12, spacingFt = 2, rows = 1, offsetFt = 15, label = 'S' }) {
+function generateSpotsFromPath(path, { spotSizeFt = 12, spacingFt = 2, label = 'S' }) {
   const features = [];
   const stepFt = spotSizeFt + spacingFt;
   const halfSizeFt = spotSizeFt / 2;
@@ -250,28 +250,21 @@ function generateSpotsFromPath(path, { spotSizeFt = 12, spacingFt = 2, rows = 1,
     const segLen = distance(segStart, segEnd);
     if (segLen === 0) continue;
 
-    // Direction along segment (in raw degree deltas)
     const dx = segEnd[0] - segStart[0];
     const dy = segEnd[1] - segStart[1];
 
-    // Tangent unit vector (per foot, in degrees)
-    const tangentLng = dx / segLen * FT_TO_LNG / FT_TO_LNG;  // normalize properly
-    const tangentLat = dy / segLen * FT_TO_LAT / FT_TO_LAT;
-    // Actually, let's compute properly using feet-normalized components:
-    const dxFt = dx / FT_TO_LNG; // segment dx in feet
-    const dyFt = dy / FT_TO_LAT; // segment dy in feet
+    const dxFt = dx / FT_TO_LNG;
+    const dyFt = dy / FT_TO_LAT;
     const magFt = Math.sqrt(dxFt * dxFt + dyFt * dyFt);
 
     // Tangent: unit vector along street, scaled to "1 foot" in degree coords
     const tanLng = (dxFt / magFt) * FT_TO_LNG;
     const tanLat = (dyFt / magFt) * FT_TO_LAT;
 
-    // Normal: perpendicular (rotate tangent 90° CW in map coords)
-    // In feet-space: perp of (dxFt, dyFt) is (-dyFt, dxFt)
+    // Normal (not used for offset anymore, but kept for rect orientation)
     const normLng = (-dyFt / magFt) * FT_TO_LNG;
     const normLat = (dxFt / magFt) * FT_TO_LAT;
 
-    // Check for corner (bend) at this vertex
     let isVertexCorner = false;
     if (i > 0) {
       const bend = angleBetween(path[i - 1], path[i], path[i + 1]);
@@ -295,52 +288,32 @@ function generateSpotsFromPath(path, { spotSizeFt = 12, spacingFt = 2, rows = 1,
     accumulated += segLen;
   }
 
-  // Mark last position as corner
   if (positions.length > 0) {
     positions[positions.length - 1].isCorner = true;
   }
 
-  // Determine dominant direction for labeling (E/W or N/S)
-  const first = path[0];
-  const last = path[path.length - 1];
-  const dLat = Math.abs(last[1] - first[1]) / FT_TO_LAT;
-  const dLng = Math.abs(last[0] - first[0]) / FT_TO_LNG;
-  const isNorthSouth = dLat > dLng;
-  const sideLabels = isNorthSouth ? ['E', 'W'] : ['N', 'S'];
-  const sideMultipliers = [1, -1]; // right side, left side
+  // Spots are placed directly on the drawn line — no perpendicular offset.
+  // Draw one line per row of booths.
+  for (let c = 0; c < positions.length; c++) {
+    const { point, tanLng, tanLat, normLng, normLat, isCorner } = positions[c];
 
-  for (let sideIdx = 0; sideIdx < 2; sideIdx++) {
-    const sideLabel = sideLabels[sideIdx];
-    const mult = sideMultipliers[sideIdx];
+    const trafficScore = isCorner ? 9 : Math.max(1, Math.round(5 - Math.abs(c - positions.length / 2) / (positions.length / 10)));
 
-    for (let r = 0; r < rows; r++) {
-      const rowOffsetFt = offsetFt + r * stepFt;
-
-      for (let c = 0; c < positions.length; c++) {
-        const { point, tanLng, tanLat, normLng, normLat, isCorner } = positions[c];
-        // Offset center perpendicular to street
-        const centerLng = point[0] + mult * rowOffsetFt * normLng;
-        const centerLat = point[1] + mult * rowOffsetFt * normLat;
-
-        const trafficScore = isCorner ? 9 : Math.max(1, Math.round(5 - Math.abs(c - positions.length / 2) / (positions.length / 10)));
-
-        features.push({
-          type: 'Feature',
-          geometry: makeRotatedSpotRect(centerLng, centerLat, halfSizeFt, tanLng, tanLat, normLng, normLat),
-          properties: {
-            id: crypto.randomUUID(),
-            label: `${label}${sideLabel}${r + 1}${String(c + 1).padStart(2, '0')}`,
-            isCorner,
-            trafficScore: Math.min(10, trafficScore),
-            side: sideLabel,
-            row: r + 1,
-            col: c + 1,
-            area: 'path',
-            assignedVendorId: null,
-          },
-        });
-      }
-    }
+    features.push({
+      type: 'Feature',
+      geometry: makeRotatedSpotRect(point[0], point[1], halfSizeFt, tanLng, tanLat, normLng, normLat),
+      properties: {
+        id: crypto.randomUUID(),
+        label: `${label}${String(c + 1).padStart(2, '0')}`,
+        isCorner,
+        trafficScore: Math.min(10, trafficScore),
+        side: label,
+        row: 1,
+        col: c + 1,
+        area: 'path',
+        assignedVendorId: null,
+      },
+    });
   }
 
   return features;
@@ -402,13 +375,13 @@ spotRoutes.post('/generate-grid', (req, res) => {
 
 // POST /api/spots/generate-from-path
 spotRoutes.post('/generate-from-path', (req, res) => {
-  const { path, spotSizeFt = 12, spacingFt = 2, rows = 1, offsetFt = 15, label = 'S' } = req.body;
+  const { path, spotSizeFt = 12, spacingFt = 2, label = 'S' } = req.body;
 
   if (!path || !Array.isArray(path) || path.length < 2) {
     return res.status(400).json({ error: 'path must be an array of at least 2 [lng, lat] coordinates' });
   }
 
-  const newFeatures = generateSpotsFromPath(path, { spotSizeFt, spacingFt, rows, offsetFt, label });
+  const newFeatures = generateSpotsFromPath(path, { spotSizeFt, spacingFt, label });
 
   // Append to existing spots (don't replace)
   const existingFeatures = spotsGeoJSON?.features || [];
