@@ -23,7 +23,7 @@ export function fetchSampleList() {
 }
 
 export function fetchSampleCsv(filename) {
-  return api.get(`/api/vendors/samples/${filename}`).then((res) => res.data);
+  return api.get(`/api/vendors/samples/${filename}`, { responseType: 'text', transformResponse: [(data) => data] }).then((res) => res.data);
 }
 
 // ---------- Spots ----------

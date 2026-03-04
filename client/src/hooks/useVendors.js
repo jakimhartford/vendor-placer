@@ -11,7 +11,9 @@ export default function useVendors() {
     setError(null);
     try {
       const data = await fetchVendors();
-      setVendors(Array.isArray(data) ? data : data.vendors ?? []);
+      if (Array.isArray(data)) setVendors(data);
+      else if (data && Array.isArray(data.vendors)) setVendors(data.vendors);
+      else setVendors([]);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
     } finally {

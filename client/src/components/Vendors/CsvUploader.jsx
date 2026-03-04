@@ -8,7 +8,11 @@ export default function CsvUploader({ onUpload, loading }) {
   const fileRef = useRef(null);
 
   useEffect(() => {
-    fetchSampleList().then(setSamples).catch(() => {});
+    fetchSampleList()
+      .then((data) => {
+        if (Array.isArray(data)) setSamples(data);
+      })
+      .catch(() => {});
   }, []);
 
   const handleSample = async (filename) => {
