@@ -28,8 +28,8 @@ body,
 
 /* ---------- Sidebar ---------- */
 .sidebar {
-  width: 350px;
-  min-width: 350px;
+  width: 480px;
+  min-width: 480px;
   background: #1a1a2e;
   color: #e2e8f0;
   display: flex;
