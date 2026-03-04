@@ -153,7 +153,7 @@ function toCsv(vendors) {
 
 // ── Main ────────────────────────────────────────
 
-const SIZES = [10, 200, 250, 1000];
+const SIZES = [10, 50, 100, 200, 500, 1000];
 
 for (const size of SIZES) {
   const vendors = generateVendors(size);

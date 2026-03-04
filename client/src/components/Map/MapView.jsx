@@ -4,7 +4,7 @@ import { MAP_CENTER, DEFAULT_ZOOM } from '../../utils/constants.js';
 import SpotLayer from './SpotLayer.jsx';
 import DrawToolbar from './DrawToolbar.jsx';
 
-export default function MapView({ spots, vendors, assignments, onSpotsChange }) {
+export default function MapView({ spots, vendors, assignments, onSpotsChange, selectedSpotId }) {
   return (
     <MapContainer
       center={MAP_CENTER}
@@ -20,6 +20,7 @@ export default function MapView({ spots, vendors, assignments, onSpotsChange }) 
         spots={spots}
         vendors={vendors}
         assignments={assignments}
+        selectedSpotId={selectedSpotId}
       />
       <DrawToolbar spots={spots} onSpotsChange={onSpotsChange} />
     </MapContainer>

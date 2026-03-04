@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import useVendors from './hooks/useVendors.js';
 import useSpots from './hooks/useSpots.js';
 import usePlacements from './hooks/usePlacements.js';
@@ -48,6 +48,19 @@ export default function App() {
     await saveSpots(geojson);
   };
 
+  const [selectedVendorId, setSelectedVendorId] = useState(null);
+
+  // Find the spotId for a selected vendor so the map can highlight/pan to it
+  const selectedSpotId = selectedVendorId
+    ? Object.entries(placements.assignments || {}).find(
+        ([, vid]) => vid === selectedVendorId
+      )?.[0] || null
+    : null;
+
+  const handleSelectVendor = useCallback((vendorId) => {
+    setSelectedVendorId((prev) => (prev === vendorId ? null : vendorId));
+  }, []);
+
   const loading = vendorsLoading || spotsLoading || placementsLoading;
 
   return (
@@ -82,7 +95,12 @@ export default function App() {
 
         <div className="sidebar-section">
           <h3>Vendors</h3>
-          <VendorTable vendors={vendors} />
+          <VendorTable
+            vendors={vendors}
+            assignments={placements.assignments}
+            spots={spots}
+            onSelectVendor={handleSelectVendor}
+          />
         </div>
       </aside>
 
@@ -93,6 +111,7 @@ export default function App() {
           vendors={vendors}
           assignments={placements.assignments}
           onSpotsChange={handleSpotsChange}
+          selectedSpotId={selectedSpotId}
         />
       </main>
     </div>

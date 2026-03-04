@@ -1,13 +1,9 @@
-import React from 'react';
-import { Rectangle, Tooltip } from 'react-leaflet';
+import React, { useEffect, useRef } from 'react';
+import { Rectangle, Tooltip, useMap } from 'react-leaflet';
 import { getSpotColor } from '../../utils/tierColors.js';
 
-/**
- * Converts a GeoJSON Polygon feature to Leaflet LatLngBounds.
- * Expects the first ring of a rectangular polygon.
- */
 function featureToBounds(feature) {
-  const coords = feature.geometry.coordinates[0]; // outer ring
+  const coords = feature.geometry.coordinates[0];
   let minLat = Infinity,
     maxLat = -Infinity,
     minLng = Infinity,
@@ -26,7 +22,31 @@ function featureToBounds(feature) {
   ];
 }
 
-export default function SpotLayer({ spots, vendors, assignments }) {
+function SelectedSpotPanner({ selectedSpotId, spots }) {
+  const map = useMap();
+  const prevId = useRef(null);
+
+  useEffect(() => {
+    if (!selectedSpotId || selectedSpotId === prevId.current) return;
+    prevId.current = selectedSpotId;
+
+    const feature = spots?.features?.find((f) => f.properties?.id === selectedSpotId);
+    if (!feature) return;
+
+    try {
+      const bounds = featureToBounds(feature);
+      const centerLat = (bounds[0][0] + bounds[1][0]) / 2;
+      const centerLng = (bounds[0][1] + bounds[1][1]) / 2;
+      map.flyTo([centerLat, centerLng], 19, { duration: 0.5 });
+    } catch {
+      // ignore
+    }
+  }, [selectedSpotId, spots, map]);
+
+  return null;
+}
+
+export default function SpotLayer({ spots, vendors, assignments, selectedSpotId }) {
   if (!spots?.features?.length) return null;
 
   const vendorMap = {};
@@ -36,6 +56,7 @@ export default function SpotLayer({ spots, vendors, assignments }) {
 
   return (
     <>
+      <SelectedSpotPanner selectedSpotId={selectedSpotId} spots={spots} />
       {spots.features.map((feature, idx) => {
         if (!feature.geometry || feature.geometry.type !== 'Polygon') {
           return null;
@@ -45,6 +66,7 @@ export default function SpotLayer({ spots, vendors, assignments }) {
         const color = getSpotColor(feature, vendors || [], assignments || {});
         const assignedVendorId = assignments?.[spotId];
         const assignedVendor = assignedVendorId ? vendorMap[assignedVendorId] : null;
+        const isSelected = spotId === selectedSpotId;
 
         let bounds;
         try {
@@ -58,10 +80,10 @@ export default function SpotLayer({ spots, vendors, assignments }) {
             key={spotId}
             bounds={bounds}
             pathOptions={{
-              color,
-              weight: 2,
-              fillColor: color,
-              fillOpacity: 0.35,
+              color: isSelected ? '#facc15' : color,
+              weight: isSelected ? 4 : 2,
+              fillColor: isSelected ? '#facc15' : color,
+              fillOpacity: isSelected ? 0.6 : 0.35,
             }}
             eventHandlers={{
               click: () => {
