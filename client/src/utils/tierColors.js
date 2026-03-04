@@ -6,6 +6,7 @@ export const TIER_COLORS = {
 };
 
 export const EMPTY_COLOR = '#6b7280';
+export const DEAD_ZONE_COLOR = '#dc2626';
 
 /**
  * Returns the display color for a spot based on its assignment status.
@@ -15,6 +16,10 @@ export const EMPTY_COLOR = '#6b7280';
  * @returns {string} Hex color string
  */
 export function getSpotColor(spot, vendors, assignments) {
+  if (spot?.properties?.deadZone) {
+    return DEAD_ZONE_COLOR;
+  }
+
   if (!assignments || !spot?.properties?.id) {
     return EMPTY_COLOR;
   }

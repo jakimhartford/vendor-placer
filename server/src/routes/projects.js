@@ -1,121 +1,129 @@
 import { Router } from 'express';
-import crypto from 'crypto';
-import { readFileSync, writeFileSync, readdirSync, unlinkSync, existsSync, mkdirSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import Project from '../models/Project.js';
 import { getSpots, setSpots } from './spots.js';
 import { getVendors, setVendors } from './vendors.js';
 import { getPlacements, setPlacements } from './placements.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const PROJECTS_DIR = join(__dirname, '..', 'data', 'projects');
-
-// Ensure directory exists
-if (!existsSync(PROJECTS_DIR)) {
-  mkdirSync(PROJECTS_DIR, { recursive: true });
-}
-
 export const projectRoutes = Router();
 
-// GET /api/projects — list project summaries
-projectRoutes.get('/', (_req, res) => {
+// GET /api/projects — list project summaries for current user
+projectRoutes.get('/', async (req, res) => {
   try {
-    const files = readdirSync(PROJECTS_DIR).filter((f) => f.endsWith('.json'));
-    const summaries = files.map((f) => {
-      const data = JSON.parse(readFileSync(join(PROJECTS_DIR, f), 'utf-8'));
-      return {
-        id: data.id,
-        name: data.name,
-        createdAt: data.createdAt,
-        updatedAt: data.updatedAt,
-      };
-    }).sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+    const projects = await Project.find({ owner: req.user.id })
+      .select('name createdAt updatedAt')
+      .sort({ updatedAt: -1 });
+
+    const summaries = projects.map((p) => ({
+      id: p._id,
+      name: p.name,
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+    }));
+
     return res.json(summaries);
-  } catch {
-    return res.json([]);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
   }
 });
 
 // GET /api/projects/:id — load a full project and restore in-memory state
-projectRoutes.get('/:id', (req, res) => {
-  const filePath = join(PROJECTS_DIR, `${req.params.id}.json`);
-  if (!existsSync(filePath)) {
-    return res.status(404).json({ error: 'Project not found' });
-  }
+projectRoutes.get('/:id', async (req, res) => {
   try {
-    const data = JSON.parse(readFileSync(filePath, 'utf-8'));
-    // Restore in-memory state
-    if (data.spotsGeoJSON) setSpots(data.spotsGeoJSON);
-    if (data.vendors) setVendors(data.vendors);
-    if (data.placements) setPlacements(data.placements);
-    return res.json(data);
+    const project = await Project.findOne({ _id: req.params.id, owner: req.user.id });
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const userId = req.user.id;
+
+    // Restore in-memory state for this user
+    if (project.spotsGeoJSON) setSpots(userId, project.spotsGeoJSON);
+    if (project.vendors) setVendors(userId, project.vendors);
+    if (project.placements) setPlacements(userId, project.placements);
+
+    return res.json({
+      id: project._id,
+      name: project.name,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+      spotsGeoJSON: project.spotsGeoJSON,
+      vendors: project.vendors,
+      placements: project.placements,
+      paths: project.paths,
+      mapCenter: project.mapCenter,
+      zoom: project.zoom,
+    });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
 });
 
 // POST /api/projects — create new project from current state
-projectRoutes.post('/', (req, res) => {
+projectRoutes.post('/', async (req, res) => {
   try {
+    const userId = req.user.id;
     const { name, mapCenter, zoom, paths } = req.body;
-    const id = crypto.randomUUID();
-    const now = new Date().toISOString();
-    const project = {
-      id,
-      name: name || `Project ${id.slice(0, 8)}`,
-      createdAt: now,
-      updatedAt: now,
+
+    const project = await Project.create({
+      owner: userId,
+      name: name || 'Untitled Project',
+      spotsGeoJSON: getSpots(userId),
+      vendors: getVendors(userId),
+      placements: getPlacements(userId),
+      paths: paths || [],
       mapCenter: mapCenter || null,
       zoom: zoom || null,
-      spotsGeoJSON: getSpots(),
-      vendors: getVendors(),
-      placements: getPlacements(),
-      paths: paths || [],
-    };
-    writeFileSync(join(PROJECTS_DIR, `${id}.json`), JSON.stringify(project, null, 2));
-    return res.json({ id, name: project.name, createdAt: now, updatedAt: now });
+    });
+
+    return res.json({
+      id: project._id,
+      name: project.name,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+    });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
 });
 
 // PUT /api/projects/:id — update/save current state to existing project
-projectRoutes.put('/:id', (req, res) => {
-  const filePath = join(PROJECTS_DIR, `${req.params.id}.json`);
-  if (!existsSync(filePath)) {
-    return res.status(404).json({ error: 'Project not found' });
-  }
+projectRoutes.put('/:id', async (req, res) => {
   try {
-    const existing = JSON.parse(readFileSync(filePath, 'utf-8'));
+    const userId = req.user.id;
+    const project = await Project.findOne({ _id: req.params.id, owner: userId });
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
     const { name, mapCenter, zoom, paths } = req.body;
-    const now = new Date().toISOString();
-    const updated = {
-      ...existing,
-      name: name || existing.name,
-      updatedAt: now,
-      mapCenter: mapCenter ?? existing.mapCenter,
-      zoom: zoom ?? existing.zoom,
-      spotsGeoJSON: getSpots(),
-      vendors: getVendors(),
-      placements: getPlacements(),
-      paths: paths ?? existing.paths,
-    };
-    writeFileSync(filePath, JSON.stringify(updated, null, 2));
-    return res.json({ id: updated.id, name: updated.name, updatedAt: now });
+
+    project.name = name || project.name;
+    project.mapCenter = mapCenter ?? project.mapCenter;
+    project.zoom = zoom ?? project.zoom;
+    project.spotsGeoJSON = getSpots(userId);
+    project.vendors = getVendors(userId);
+    project.placements = getPlacements(userId);
+    project.paths = paths ?? project.paths;
+
+    await project.save();
+
+    return res.json({
+      id: project._id,
+      name: project.name,
+      updatedAt: project.updatedAt,
+    });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
 });
 
 // DELETE /api/projects/:id
-projectRoutes.delete('/:id', (req, res) => {
-  const filePath = join(PROJECTS_DIR, `${req.params.id}.json`);
-  if (!existsSync(filePath)) {
-    return res.status(404).json({ error: 'Project not found' });
-  }
+projectRoutes.delete('/:id', async (req, res) => {
   try {
-    unlinkSync(filePath);
+    const result = await Project.findOneAndDelete({ _id: req.params.id, owner: req.user.id });
+    if (!result) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
     return res.json({ message: 'Project deleted' });
   } catch (err) {
     return res.status(500).json({ error: err.message });

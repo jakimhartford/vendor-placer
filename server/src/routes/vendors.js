@@ -4,6 +4,7 @@ import { readFileSync, readdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { parseVendorCsv } from '../services/csvService.js';
+import { getSession } from '../state/sessionStore.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -11,17 +12,14 @@ const DATA_DIR = join(__dirname, '..', 'data');
 
 export const vendorRoutes = Router();
 
-// In-memory vendor store
-let vendors = [];
-
-/** Get the current vendors array (used by other modules) */
-export function getVendors() {
-  return vendors;
+/** Get vendors for a user session (used by other modules) */
+export function getVendors(userId) {
+  return getSession(userId).vendors;
 }
 
-/** Replace vendors in-memory (used by projects) */
-export function setVendors(v) {
-  vendors = v;
+/** Replace vendors for a user session (used by projects) */
+export function setVendors(userId, v) {
+  getSession(userId).vendors = v;
 }
 
 // POST /api/vendors/upload — parse CSV and store vendors
@@ -40,12 +38,13 @@ vendorRoutes.post('/upload', (req, res) => {
       ...v,
     }));
 
-    vendors = newVendors;
+    const session = getSession(req.user.id);
+    session.vendors = newVendors;
 
     return res.json({
-      message: `Imported ${vendors.length} vendors`,
-      count: vendors.length,
-      vendors,
+      message: `Imported ${session.vendors.length} vendors`,
+      count: session.vendors.length,
+      vendors: session.vendors,
     });
   } catch (err) {
     return res.status(400).json({ error: err.message });
@@ -53,14 +52,15 @@ vendorRoutes.post('/upload', (req, res) => {
 });
 
 // GET /api/vendors — return all vendors
-vendorRoutes.get('/', (_req, res) => {
-  return res.json(vendors);
+vendorRoutes.get('/', (req, res) => {
+  return res.json(getSession(req.user.id).vendors);
 });
 
 // DELETE /api/vendors — clear all vendors
-vendorRoutes.delete('/', (_req, res) => {
-  const count = vendors.length;
-  vendors = [];
+vendorRoutes.delete('/', (req, res) => {
+  const session = getSession(req.user.id);
+  const count = session.vendors.length;
+  session.vendors = [];
   return res.json({ message: `Cleared ${count} vendors` });
 });
 

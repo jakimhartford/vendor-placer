@@ -27,6 +27,39 @@ function buildNameMap(vendors) {
  * @returns {{ allowed: boolean, reason?: string }}
  */
 function canPlace(vendor, spot, adjacencyMap, assignmentMap, nameMap) {
+  // Dead zones are never available for placement
+  if (spot.deadZone) {
+    return { allowed: false, reason: `Spot "${spot.label}" is a dead zone` };
+  }
+
+  // ── Spot-level restrictions ──
+
+  // Excluded categories: spot explicitly bans this vendor's category
+  if (spot.excludedCategories?.length && spot.excludedCategories.includes(vendor.category)) {
+    return { allowed: false, reason: `Spot "${spot.label}" excludes category "${vendor.category}"` };
+  }
+
+  // Excluded tiers: spot explicitly bans this vendor's tier
+  if (spot.excludedTiers?.length && spot.excludedTiers.includes(vendor.tier)) {
+    return { allowed: false, reason: `Spot "${spot.label}" excludes tier "${vendor.tier}"` };
+  }
+
+  // Allowed categories: if set, only listed categories may use this spot
+  if (spot.allowedCategories?.length && !spot.allowedCategories.includes(vendor.category)) {
+    return { allowed: false, reason: `Spot "${spot.label}" only allows categories: ${spot.allowedCategories.join(', ')}` };
+  }
+
+  // Allowed tiers: if set, only listed tiers may use this spot
+  if (spot.allowedTiers?.length && !spot.allowedTiers.includes(vendor.tier)) {
+    return { allowed: false, reason: `Spot "${spot.label}" only allows tiers: ${spot.allowedTiers.join(', ')}` };
+  }
+
+  // Premium spot: only premium vendors or platinum/gold tier
+  if (spot.premium && !vendor.premium && vendor.tier !== 'platinum' && vendor.tier !== 'gold') {
+    return { allowed: false, reason: `Spot "${spot.label}" is premium — requires premium vendor or platinum/gold tier` };
+  }
+
+  // ── Neighbor constraints ──
   const neighborSpotIds = adjacencyMap.get(spot.id) || new Set();
 
   for (const nSpotId of neighborSpotIds) {

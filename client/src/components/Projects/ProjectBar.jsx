@@ -25,7 +25,7 @@ export default function ProjectBar({
   };
 
   return (
-    <div style={{ marginBottom: 8 }}>
+    <div style={{ marginBottom: 8 }} data-tour="project-bar">
       <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginBottom: 6 }}>
         <select
           value={currentProjectId || ''}

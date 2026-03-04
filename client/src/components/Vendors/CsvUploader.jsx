@@ -56,7 +56,7 @@ export default function CsvUploader({ onUpload, loading }) {
   };
 
   return (
-    <div>
+    <div data-tour="upload-vendors">
       {samples.length > 0 && (
         <div style={{ marginBottom: 10 }}>
           <label style={{ fontSize: 11, color: '#94a3b8', display: 'block', marginBottom: 4 }}>

@@ -32,7 +32,7 @@ function SelectedSpotPanner({ selectedSpotId, spots }) {
 
     try {
       const [lat, lng] = featureCenter(feature);
-      map.flyTo([lat, lng], 19, { duration: 0.5 });
+      map.flyTo([lat, lng], map.getZoom(), { duration: 0.5 });
     } catch {
       // ignore
     }
@@ -41,7 +41,9 @@ function SelectedSpotPanner({ selectedSpotId, spots }) {
   return null;
 }
 
-export default function SpotLayer({ spots, vendors, assignments, selectedSpotId, paths }) {
+export { featureCenter };
+
+export default function SpotLayer({ spots, vendors, assignments, selectedSpotId, paths, onSpotClick, movingVendor, selectedSpotIds }) {
   const hasSpots = spots?.features?.length > 0;
   const hasPaths = paths?.length > 0;
   if (!hasSpots && !hasPaths) return null;
@@ -76,6 +78,10 @@ export default function SpotLayer({ spots, vendors, assignments, selectedSpotId,
         const assignedVendorId = assignments?.[spotId];
         const assignedVendor = assignedVendorId ? vendorMap[assignedVendorId] : null;
         const isSelected = spotId === selectedSpotId;
+        const isMultiSelected = selectedSpotIds?.has?.(spotId);
+        const isDeadZone = !!feature.properties?.deadZone;
+        const isMoveSource = movingVendor?.sourceSpotId === spotId;
+        const isMoveTarget = movingVendor && !assignedVendorId && !isDeadZone;
 
         let positions;
         try {
@@ -84,19 +90,52 @@ export default function SpotLayer({ spots, vendors, assignments, selectedSpotId,
           return null;
         }
 
+        let strokeColor = color;
+        let strokeWeight = 2;
+        let fill = color;
+        let fillOp = 0.35;
+        let dashArray = undefined;
+
+        if (isMoveSource) {
+          strokeColor = '#22c55e';
+          fill = '#22c55e';
+          fillOp = 0.5;
+          strokeWeight = 4;
+        } else if (isMoveTarget) {
+          strokeColor = '#86efac';
+          fill = color;
+          fillOp = 0.25;
+          strokeWeight = 2;
+          dashArray = '4,4';
+        } else if (isMultiSelected) {
+          strokeColor = '#f97316';
+          fill = '#f97316';
+          fillOp = 0.5;
+          strokeWeight = 3;
+        } else if (isSelected) {
+          strokeColor = '#facc15';
+          fill = '#facc15';
+          fillOp = 0.6;
+          strokeWeight = 4;
+        } else if (isDeadZone) {
+          fillOp = 0.5;
+          dashArray = '6,4';
+        }
+
         return (
           <Polygon
             key={spotId}
             positions={positions}
             pathOptions={{
-              color: isSelected ? '#facc15' : color,
-              weight: isSelected ? 4 : 2,
-              fillColor: isSelected ? '#facc15' : color,
-              fillOpacity: isSelected ? 0.6 : 0.35,
+              color: strokeColor,
+              weight: strokeWeight,
+              fillColor: fill,
+              fillOpacity: fillOp,
+              dashArray,
             }}
             eventHandlers={{
-              click: () => {
-                console.log('Spot clicked:', feature.properties, assignedVendor);
+              click: (e) => {
+                if (onSpotClick) onSpotClick(feature, e.originalEvent);
               },
             }}
           >

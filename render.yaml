@@ -9,6 +9,10 @@ services:
         value: "10000"
       - key: NODE_ENV
         value: production
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
 
   - type: web
     name: vendor-placer-client

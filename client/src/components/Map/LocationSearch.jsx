@@ -42,6 +42,7 @@ export default function LocationSearch() {
   return (
     <div
       ref={containerRef}
+      data-tour="location-search"
       onClick={stopPropagation}
       onMouseDown={stopPropagation}
       onDoubleClick={stopPropagation}

@@ -1,27 +1,17 @@
 import { Router } from 'express';
 import crypto from 'crypto';
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { getSession } from '../state/sessionStore.js';
 
 export const spotRoutes = Router();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// Load default spots from JSON
-let spotsGeoJSON = JSON.parse(
-  readFileSync(join(__dirname, '..', 'data', 'defaultSpots.json'), 'utf-8')
-);
-
-/** Get the current spots GeoJSON (used by other modules) */
-export function getSpots() {
-  return spotsGeoJSON;
+/** Get the current spots GeoJSON for a user (used by other modules) */
+export function getSpots(userId) {
+  return getSession(userId).spotsGeoJSON;
 }
 
-/** Replace spots in-memory (used by projects) */
-export function setSpots(geojson) {
-  spotsGeoJSON = geojson;
+/** Replace spots in-memory for a user (used by projects) */
+export function setSpots(userId, geojson) {
+  getSession(userId).spotsGeoJSON = geojson;
 }
 
 // ──────────────────────────────────────────────
@@ -59,7 +49,6 @@ const STREET_OFFSET = 0.00006;
  * Create a rectangular GeoJSON polygon for a single spot.
  */
 function makeSpotPolygon(lat, lng) {
-  // Coordinates in [lng, lat] GeoJSON order
   return {
     type: 'Polygon',
     coordinates: [
@@ -68,7 +57,7 @@ function makeSpotPolygon(lat, lng) {
         [lng + SPOT_LNG, lat],
         [lng + SPOT_LNG, lat + SPOT_LAT],
         [lng, lat + SPOT_LAT],
-        [lng, lat], // close ring
+        [lng, lat],
       ],
     ],
   };
@@ -79,8 +68,6 @@ function makeSpotPolygon(lat, lng) {
  */
 function generateBeachSpots(rows) {
   const features = [];
-
-  // Center lat of the street
   const centerLat = (BEACH.south + BEACH.north) / 2;
   const lngRange = BEACH.east - BEACH.west;
   const step = SPOT_LNG + GAP_LNG;
@@ -131,7 +118,6 @@ function generateBeachSpots(rows) {
  */
 function generateMagnoliaSpots(rows) {
   const features = [];
-
   const centerLng = (MAGNOLIA.west + MAGNOLIA.east) / 2;
   const latRange = MAGNOLIA.north - MAGNOLIA.south;
   const step = SPOT_LAT + GAP_LAT;
@@ -153,7 +139,6 @@ function generateMagnoliaSpots(rows) {
         const lat = MAGNOLIA.south + c * step;
         const isCorner = c === 0 || c === rowCount - 1;
 
-        // Spots near Beach St intersection get higher traffic
         const distToBeach = Math.abs(lat - BEACH.south);
         const intersectionBonus = distToBeach < 0.0003 ? 4 : 0;
         const isIntersection = distToBeach < 0.0001;
@@ -190,14 +175,13 @@ function generateMagnoliaSpots(rows) {
 // Generate spots along a drawn path (LineString)
 // ──────────────────────────────────────────────
 
-// Conversion constants (approximate at ~29° latitude)
-const FT_TO_LAT = 0.0000027;  // 1 ft in degrees latitude
-const FT_TO_LNG = 0.0000034;  // 1 ft in degrees longitude
+const FT_TO_LAT = 0.0000027;
+const FT_TO_LNG = 0.0000034;
 
 function distance(a, b) {
   const dlat = (b[1] - a[1]) / FT_TO_LAT;
   const dlng = (b[0] - a[0]) / FT_TO_LNG;
-  return Math.sqrt(dlat * dlat + dlng * dlng); // in feet
+  return Math.sqrt(dlat * dlat + dlng * dlng);
 }
 
 function interpolate(a, b, t) {
@@ -214,19 +198,12 @@ function angleBetween(a, b, c) {
   return Math.acos(Math.min(1, Math.max(-1, dot / (mag1 * mag2)))) * (180 / Math.PI);
 }
 
-/**
- * Build a rotated rectangle polygon aligned to a street direction.
- * tangent = unit vector along street (in degree units per foot)
- * normal  = unit vector perpendicular to street (in degree units per foot)
- */
 function makeRotatedSpotRect(centerLng, centerLat, halfSizeFt, tangentLng, tangentLat, normalLng, normalLat) {
-  // Half-size along tangent (parallel to street) and normal (perpendicular)
   const tLng = halfSizeFt * tangentLng;
   const tLat = halfSizeFt * tangentLat;
   const nLng = halfSizeFt * normalLng;
   const nLat = halfSizeFt * normalLat;
 
-  // Four corners: center +/- tangent +/- normal
   return {
     type: 'Polygon',
     coordinates: [[
@@ -234,7 +211,7 @@ function makeRotatedSpotRect(centerLng, centerLat, halfSizeFt, tangentLng, tange
       [centerLng + tLng - nLng, centerLat + tLat - nLat],
       [centerLng + tLng + nLng, centerLat + tLat + nLat],
       [centerLng - tLng + nLng, centerLat - tLat + nLat],
-      [centerLng - tLng - nLng, centerLat - tLat - nLat], // close
+      [centerLng - tLng - nLng, centerLat - tLat - nLat],
     ]],
   };
 }
@@ -244,10 +221,9 @@ function generateSpotsFromPath(path, { spotSizeFt = 12, spacingFt = 2, label = '
   const stepFt = spotSizeFt + spacingFt;
   const halfSizeFt = spotSizeFt / 2;
 
-  // Walk the path at stepFt intervals, collecting positions and direction vectors
   const positions = [];
   let accumulated = 0;
-  let nextMark = halfSizeFt; // start half-spot in
+  let nextMark = halfSizeFt;
 
   for (let i = 0; i < path.length - 1; i++) {
     const segStart = path[i];
@@ -262,11 +238,8 @@ function generateSpotsFromPath(path, { spotSizeFt = 12, spacingFt = 2, label = '
     const dyFt = dy / FT_TO_LAT;
     const magFt = Math.sqrt(dxFt * dxFt + dyFt * dyFt);
 
-    // Tangent: unit vector along street, scaled to "1 foot" in degree coords
     const tanLng = (dxFt / magFt) * FT_TO_LNG;
     const tanLat = (dyFt / magFt) * FT_TO_LAT;
-
-    // Normal (not used for offset anymore, but kept for rect orientation)
     const normLng = (-dyFt / magFt) * FT_TO_LNG;
     const normLat = (dxFt / magFt) * FT_TO_LAT;
 
@@ -297,8 +270,6 @@ function generateSpotsFromPath(path, { spotSizeFt = 12, spacingFt = 2, label = '
     positions[positions.length - 1].isCorner = true;
   }
 
-  // Spots are placed directly on the drawn line — no perpendicular offset.
-  // Draw one line per row of booths.
   for (let c = 0; c < positions.length; c++) {
     const { point, tanLng, tanLat, normLng, normLat, isCorner } = positions[c];
 
@@ -329,14 +300,15 @@ function generateSpotsFromPath(path, { spotSizeFt = 12, spacingFt = 2, label = '
 // ──────────────────────────────────────────────
 
 // GET /api/spots
-spotRoutes.get('/', (_req, res) => {
-  return res.json(spotsGeoJSON);
+spotRoutes.get('/', (req, res) => {
+  return res.json(getSession(req.user.id).spotsGeoJSON);
 });
 
 // DELETE /api/spots — clear all spots
-spotRoutes.delete('/', (_req, res) => {
-  const count = spotsGeoJSON.features?.length || 0;
-  spotsGeoJSON = { type: 'FeatureCollection', features: [], metadata: {} };
+spotRoutes.delete('/', (req, res) => {
+  const session = getSession(req.user.id);
+  const count = session.spotsGeoJSON.features?.length || 0;
+  session.spotsGeoJSON = { type: 'FeatureCollection', features: [], metadata: {} };
   return res.json({ message: `Cleared ${count} spots`, count: 0 });
 });
 
@@ -346,10 +318,11 @@ spotRoutes.put('/', (req, res) => {
   if (!body || body.type !== 'FeatureCollection') {
     return res.status(400).json({ error: 'Body must be a GeoJSON FeatureCollection' });
   }
-  spotsGeoJSON = body;
+  const session = getSession(req.user.id);
+  session.spotsGeoJSON = body;
   return res.json({
-    message: `Replaced spots collection (${spotsGeoJSON.features.length} spots)`,
-    count: spotsGeoJSON.features.length,
+    message: `Replaced spots collection (${session.spotsGeoJSON.features.length} spots)`,
+    count: session.spotsGeoJSON.features.length,
   });
 });
 
@@ -365,27 +338,29 @@ spotRoutes.post('/generate-grid', (req, res) => {
     features = features.concat(generateMagnoliaSpots(rows));
   }
 
-  spotsGeoJSON = {
+  const session = getSession(req.user.id);
+  session.spotsGeoJSON = {
     type: 'FeatureCollection',
     features,
-    metadata: spotsGeoJSON.metadata || {},
+    metadata: session.spotsGeoJSON.metadata || {},
   };
 
   return res.json({
     message: `Generated ${features.length} spots for area "${area}"`,
     count: features.length,
-    spotsGeoJSON,
+    spotsGeoJSON: session.spotsGeoJSON,
   });
 });
 
-// POST /api/spots/add-single — place a single spot at a clicked location
+// POST /api/spots/add-single
 spotRoutes.post('/add-single', (req, res) => {
-  const { lng, lat, label } = req.body;
+  const { lng, lat, label, deadZone } = req.body;
   if (typeof lng !== 'number' || typeof lat !== 'number') {
     return res.status(400).json({ error: 'lng and lat are required numbers' });
   }
 
-  const existingCount = spotsGeoJSON.features?.length || 0;
+  const session = getSession(req.user.id);
+  const existingCount = session.spotsGeoJSON.features?.length || 0;
   const spotLabel = label || `P${String(existingCount + 1).padStart(2, '0')}`;
 
   const feature = {
@@ -401,19 +376,87 @@ spotRoutes.post('/add-single', (req, res) => {
       col: existingCount + 1,
       area: 'manual',
       assignedVendorId: null,
+      ...(deadZone ? { deadZone: true } : {}),
     },
   };
 
-  const existingFeatures = spotsGeoJSON?.features || [];
-  spotsGeoJSON = {
+  const existingFeatures = session.spotsGeoJSON?.features || [];
+  session.spotsGeoJSON = {
     type: 'FeatureCollection',
     features: [...existingFeatures, feature],
-    metadata: spotsGeoJSON.metadata || {},
+    metadata: session.spotsGeoJSON.metadata || {},
   };
 
   return res.json({
     message: `Added spot "${spotLabel}"`,
-    spotsGeoJSON,
+    spotsGeoJSON: session.spotsGeoJSON,
+  });
+});
+
+// PATCH /api/spots/:id
+spotRoutes.patch('/:id', (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+
+  if (!updates || typeof updates !== 'object') {
+    return res.status(400).json({ error: 'Body must be an object of properties to update' });
+  }
+
+  const session = getSession(req.user.id);
+  const idx = session.spotsGeoJSON.features.findIndex((f) => f.properties?.id === id);
+  if (idx === -1) {
+    return res.status(404).json({ error: `Spot "${id}" not found` });
+  }
+
+  session.spotsGeoJSON.features[idx].properties = {
+    ...session.spotsGeoJSON.features[idx].properties,
+    ...updates,
+    id,
+  };
+
+  return res.json({
+    message: `Updated spot "${id}"`,
+    spotsGeoJSON: session.spotsGeoJSON,
+  });
+});
+
+// DELETE /api/spots/:id
+spotRoutes.delete('/:id', (req, res) => {
+  const { id } = req.params;
+  const session = getSession(req.user.id);
+  const idx = session.spotsGeoJSON.features.findIndex((f) => f.properties?.id === id);
+  if (idx === -1) {
+    return res.status(404).json({ error: `Spot "${id}" not found` });
+  }
+
+  session.spotsGeoJSON = {
+    ...session.spotsGeoJSON,
+    features: session.spotsGeoJSON.features.filter((f) => f.properties?.id !== id),
+  };
+
+  return res.json({
+    message: `Deleted spot "${id}"`,
+    spotsGeoJSON: session.spotsGeoJSON,
+  });
+});
+
+// POST /api/spots/delete-batch
+spotRoutes.post('/delete-batch', (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'ids must be a non-empty array' });
+  }
+  const session = getSession(req.user.id);
+  const idSet = new Set(ids);
+  const before = session.spotsGeoJSON.features.length;
+  session.spotsGeoJSON = {
+    ...session.spotsGeoJSON,
+    features: session.spotsGeoJSON.features.filter((f) => !idSet.has(f.properties?.id)),
+  };
+  const removed = before - session.spotsGeoJSON.features.length;
+  return res.json({
+    message: `Deleted ${removed} spots`,
+    spotsGeoJSON: session.spotsGeoJSON,
   });
 });
 
@@ -427,18 +470,18 @@ spotRoutes.post('/generate-from-path', (req, res) => {
 
   const newFeatures = generateSpotsFromPath(path, { spotSizeFt, spacingFt, label });
 
-  // Append to existing spots (don't replace)
-  const existingFeatures = spotsGeoJSON?.features || [];
-  spotsGeoJSON = {
+  const session = getSession(req.user.id);
+  const existingFeatures = session.spotsGeoJSON?.features || [];
+  session.spotsGeoJSON = {
     type: 'FeatureCollection',
     features: [...existingFeatures, ...newFeatures],
-    metadata: spotsGeoJSON.metadata || {},
+    metadata: session.spotsGeoJSON.metadata || {},
   };
 
   return res.json({
-    message: `Generated ${newFeatures.length} spots along path (total: ${spotsGeoJSON.features.length})`,
+    message: `Generated ${newFeatures.length} spots along path (total: ${session.spotsGeoJSON.features.length})`,
     count: newFeatures.length,
-    totalCount: spotsGeoJSON.features.length,
-    spotsGeoJSON,
+    totalCount: session.spotsGeoJSON.features.length,
+    spotsGeoJSON: session.spotsGeoJSON,
   });
 });

@@ -15,8 +15,15 @@ export default function PlacementControls({
   onToggleSpotPlace,
   vendors,
   placements,
+  deadZonePlaceMode,
+  onToggleDeadZonePlace,
+  deadZoneDrawMode,
+  onToggleDeadZoneDraw,
+  selectedSpotIds,
+  onDeleteSelected,
 }) {
   const [spotSizeFt, setSpotSizeFt] = useState(12);
+  const [spacingFt, setSpacingFt] = useState(4);
   const vacantCount = spotCount - (filledCount || 0);
 
   // Total booths needed by all vendors
@@ -56,25 +63,41 @@ export default function PlacementControls({
         Draw a line for each row of vendor spots
       </label>
 
-      <div style={{ marginBottom: 6 }}>
-        <label style={{ fontSize: 10, color: '#64748b', display: 'block', marginBottom: 2 }}>
-          Spot size (ft)
-        </label>
-        <input
-          type="number"
-          value={spotSizeFt}
-          onChange={(e) => setSpotSizeFt(Number(e.target.value) || 12)}
-          min={6}
-          max={20}
-          style={{ width: 80, padding: '3px 6px', fontSize: 12, boxSizing: 'border-box' }}
-        />
+      <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+        <div style={{ flex: 1 }}>
+          <label style={{ fontSize: 10, color: '#64748b', display: 'block', marginBottom: 2 }}>
+            Spot size (ft)
+          </label>
+          <input
+            type="number"
+            value={spotSizeFt}
+            onChange={(e) => setSpotSizeFt(Number(e.target.value) || 12)}
+            min={6}
+            max={20}
+            style={{ width: '100%', padding: '3px 6px', fontSize: 12, boxSizing: 'border-box' }}
+          />
+        </div>
+        <div style={{ flex: 1 }}>
+          <label style={{ fontSize: 10, color: '#64748b', display: 'block', marginBottom: 2 }}>
+            Spacing (ft)
+          </label>
+          <input
+            type="number"
+            value={spacingFt}
+            onChange={(e) => setSpacingFt(Number(e.target.value) || 4)}
+            min={0}
+            max={20}
+            style={{ width: '100%', padding: '3px 6px', fontSize: 12, boxSizing: 'border-box' }}
+          />
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: 6, marginBottom: 0 }}>
         <button
           className="btn"
           disabled={loading}
-          onClick={() => onToggleStreetDraw({ spotSizeFt })}
+          onClick={() => onToggleStreetDraw({ spotSizeFt, spacingFt })}
+          data-tour="draw-street"
           style={{
             flex: 1,
             background: streetDrawMode ? '#dc2626' : '#facc15',
@@ -88,6 +111,7 @@ export default function PlacementControls({
           className="btn"
           disabled={loading}
           onClick={onToggleSpotPlace}
+          data-tour="place-spot"
           style={{
             flex: 1,
             background: spotPlaceMode ? '#dc2626' : '#22d3ee',
@@ -98,6 +122,54 @@ export default function PlacementControls({
           {spotPlaceMode ? 'Stop Placing' : 'Place Spot'}
         </button>
       </div>
+
+      {/* Dead Zone tools */}
+      <div style={{ display: 'flex', gap: 6, marginTop: 6, marginBottom: 0 }}>
+        <button
+          className="btn"
+          disabled={loading}
+          onClick={onToggleDeadZonePlace}
+          style={{
+            flex: 1,
+            background: deadZonePlaceMode ? '#991b1b' : '#dc2626',
+            color: '#fff',
+            fontWeight: 600,
+            fontSize: 11,
+          }}
+        >
+          {deadZonePlaceMode ? 'Stop Placing' : 'Place Dead Zone'}
+        </button>
+        <button
+          className="btn"
+          disabled={loading}
+          onClick={onToggleDeadZoneDraw}
+          style={{
+            flex: 1,
+            background: deadZoneDrawMode ? '#991b1b' : '#b91c1c',
+            color: '#fff',
+            fontWeight: 600,
+            fontSize: 11,
+          }}
+        >
+          {deadZoneDrawMode ? 'Cancel Draw' : 'Draw Dead Zone'}
+        </button>
+      </div>
+
+      {/* Multi-select delete */}
+      {selectedSpotIds?.size > 0 && (
+        <button
+          className="btn"
+          onClick={onDeleteSelected}
+          style={{
+            marginTop: 6,
+            background: '#f97316',
+            color: '#fff',
+            fontWeight: 600,
+          }}
+        >
+          Delete Selected ({selectedSpotIds.size})
+        </button>
+      )}
 
       {pathCount > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -161,6 +233,7 @@ export default function PlacementControls({
         className="btn btn-primary"
         disabled={loading}
         onClick={onRunPlacement}
+        data-tour="run-placement"
       >
         {loading ? 'Running...' : 'Run Placement'}
       </button>

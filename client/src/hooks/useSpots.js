@@ -6,6 +6,9 @@ import {
   generateFromPath as apiGenerateFromPath,
   clearSpots as apiClearSpots,
   addSingleSpot as apiAddSingleSpot,
+  updateSpot as apiUpdateSpot,
+  deleteSpot as apiDeleteSpot,
+  deleteSpotsBatch as apiDeleteSpotsBatch,
 } from '../api/index.js';
 
 const EMPTY_FC = { type: 'FeatureCollection', features: [] };
@@ -107,5 +110,53 @@ export default function useSpots() {
     }
   }, [loadSpots]);
 
-  return { spots, loading, loadSpots, saveSpots, generateGrid, generateFromPath, clearSpots, addSingleSpot, setSpots };
+  const updateSpot = useCallback(async (id, props) => {
+    setLoading(true);
+    try {
+      const data = await apiUpdateSpot(id, props);
+      if (data.spotsGeoJSON && data.spotsGeoJSON.type === 'FeatureCollection') {
+        setSpots(data.spotsGeoJSON);
+      } else {
+        await loadSpots();
+      }
+    } catch (err) {
+      console.error('updateSpot error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [loadSpots]);
+
+  const deleteSpot = useCallback(async (id) => {
+    setLoading(true);
+    try {
+      const data = await apiDeleteSpot(id);
+      if (data.spotsGeoJSON && data.spotsGeoJSON.type === 'FeatureCollection') {
+        setSpots(data.spotsGeoJSON);
+      } else {
+        await loadSpots();
+      }
+    } catch (err) {
+      console.error('deleteSpot error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [loadSpots]);
+
+  const deleteSpotsBatch = useCallback(async (ids) => {
+    setLoading(true);
+    try {
+      const data = await apiDeleteSpotsBatch(ids);
+      if (data.spotsGeoJSON && data.spotsGeoJSON.type === 'FeatureCollection') {
+        setSpots(data.spotsGeoJSON);
+      } else {
+        await loadSpots();
+      }
+    } catch (err) {
+      console.error('deleteSpotsBatch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [loadSpots]);
+
+  return { spots, loading, loadSpots, saveSpots, generateGrid, generateFromPath, clearSpots, addSingleSpot, setSpots, updateSpot, deleteSpot, deleteSpotsBatch };
 }
