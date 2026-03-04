@@ -1,51 +1,51 @@
 name,category,tier,exclusions,conflicts,premium
-Sunset Paintings,art,platinum,cat:jewelry,,yes
-Color Splash Studio,art,silver,,,
-Tie Dye Dreams,clothing,platinum,,,yes
-Silver Moon Jewelry,jewelry,gold,,Coastal Gems,yes
-Handmade Haven,craft,bronze,,,
-Ocean Brush Art,art,bronze,,,
-Knotty by Nature,craft,bronze,cat:art,,
-The Canvas Collective,art,bronze,,,
-Festival Maps & More,other,silver,,,
-Coastal Gems,jewelry,bronze,,Silver Moon Jewelry,
-The Craft Barn,craft,bronze,,,
-Quick Caricatures,services,gold,,Face Paint Fantasy,
-Sunscreen Station,other,gold,,,yes
-Joe's BBQ,food,bronze,,Grill & Chill,
-Driftwood Gallery,art,platinum,cat:art,,yes
-Stitch & Stone,craft,bronze,,,
-Face Paint Fantasy,services,bronze,,Quick Caricatures,
-Henna by Hannah,services,silver,,,
-Palette Knife Works,art,silver,,,
-Woodwork Wonders,craft,silver,,,
-Palm Reading Palace,services,bronze,,,
-Bead & Wire Studio,jewelry,bronze,,,
-Sea Glass Designs,jewelry,gold,,,yes
-Thread & Needle,clothing,silver,,,
-Watercolor Wonders,art,bronze,,,
-Mama Rosa's Kitchen,food,silver,,Sunrise Tacos,
-Paper & Thread,craft,bronze,,,
-The Potters Wheel,craft,silver,cat:craft,,
-Boho Beach Wear,clothing,bronze,,,
-Twisted Metal Co,jewelry,silver,,,
-Sun Kissed Apparel,clothing,platinum,,,yes
-Sunrise Tacos,food,bronze,,Mama Rosa's Kitchen,
-Photo Booth Fun,services,silver,,,
-Pet Bandana Booth,other,silver,,,
-Candle Cove Crafts,craft,bronze,cat:craft,,
-The Smoky Pit,food,silver,,Beachside Bites,
-Woven Winds,craft,platinum,,,yes
-The Hat Shack,clothing,silver,,,
-Vintage Vibes Clothing,clothing,bronze,,,
-Coastal Creamery,food,silver,,,
-Abstract Horizons,art,gold,,,
-Beachside Bites,food,silver,,The Smoky Pit,
-Grill & Chill,food,bronze,,Joe's BBQ,
-Noodle Shack,food,gold,,,yes
-Coastal Impressions,art,bronze,cat:jewelry,,
-Airbrush Alley,services,silver,,,
-Fryin' Saucer,food,silver,,,
-Coastal Threads,clothing,silver,,,
-Pearl Cove Jewelry,jewelry,gold,,,
-Island Wear Co,clothing,gold,,,
+Indigo Wave Studios,art,platinum,,,yes
+Saltwater Ceramics,craft,gold,,Driftwood & Clay Co,yes
+Palmetto Printworks,art,silver,,,
+Driftwood & Clay Co,craft,silver,,Saltwater Ceramics,
+Coastline Kettle Corn,food,bronze,,,
+Banyan Street Jewelers,jewelry,gold,,,yes
+Hula Hoop Hannah,services,bronze,,Face Paint Frenzy,
+Face Paint Frenzy,services,silver,,Hula Hoop Hannah,
+Sawgrass Leather Co,craft,bronze,,,
+Tidal Ink Tattoos,services,platinum,cat:services,,yes
+Coral Reef Canvas,art,gold,,,yes
+Mangrove Metal Works,jewelry,silver,,,
+Shell & Stone Designs,jewelry,bronze,,Banyan Street Jewelers,
+A1A Smoke Shack,food,silver,,Coastline Kettle Corn,
+Pier Pressure Art,art,bronze,,,
+Riverwalk Pottery,craft,gold,,,
+Nova Streetwear,clothing,platinum,,,yes
+Beachside Batik,clothing,silver,,,
+Flagler Fudge Factory,food,gold,,,yes
+Ormond Origami,craft,bronze,,,
+Volusia Vintage,clothing,bronze,,,
+Seabreeze Soaps,craft,silver,,,
+Old Florida Watercolors,art,silver,,,
+Lazy River Lemonade,food,bronze,,,
+Ponce Inlet Pottery,craft,bronze,,Riverwalk Pottery,
+Daytona Dough Co,food,silver,,,
+Salty Dog Bandanas,other,bronze,,,
+Island Time Illustrations,art,bronze,,,
+Tropical Twist Jewelry,jewelry,gold,,,
+Neptune's Knots,craft,silver,,,
+Palmetto Hat Co,clothing,silver,,,
+Boardwalk Bead Studio,jewelry,bronze,,,
+Manatee Mike's BBQ,food,platinum,,,yes
+Sandcastle Silks,clothing,bronze,,,
+Live Oak Leather,craft,gold,,Sawgrass Leather Co,yes
+Sunrise Smoothie Bar,food,silver,,,
+Dune Buggy Designs,art,gold,,,
+Halifax Harbor Glass,craft,silver,,,
+The Painted Pelican,art,bronze,,,
+Tomoka Tie Dye,clothing,silver,,,
+Mosquito Lagoon Maps,other,bronze,,,
+Inlet Iron Works,jewelry,silver,,,
+Coquina Rock Art,art,silver,,,
+Port Orange Pretzels,food,bronze,,,
+Oceanfront Oils,art,gold,,,
+Smyrna Stained Glass,craft,platinum,,,yes
+Disappearing Island Co,other,silver,,,
+Ponce de Leon Prints,art,bronze,,,
+Angell & Phelps Fudge,food,silver,,Flagler Fudge Factory,
+Jackie Robinson Murals,art,platinum,,,yes

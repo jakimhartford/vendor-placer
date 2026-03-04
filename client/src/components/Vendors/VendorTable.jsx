@@ -66,7 +66,9 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
           v.name?.toLowerCase().includes(q) ||
           v.category?.toLowerCase().includes(q) ||
           v.tier?.toLowerCase().includes(q) ||
-          (vendorSpotMap[v.id]?.label || '').toLowerCase().includes(q)
+          (vendorSpotMap[v.id]?.label || '').toLowerCase().includes(q) ||
+          (v.conflicts || []).some((c) => c.toLowerCase().includes(q)) ||
+          (v.premium && 'premium'.includes(q))
       );
     }
 
@@ -199,8 +201,19 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
                       )}
                     </div>
                     {hasConflicts && (
-                      <div style={{ fontSize: 9, color: '#f87171', marginTop: 1 }}>
-                        conflicts: {v.conflicts.join(', ')}
+                      <div style={{ fontSize: 9, marginTop: 2, display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                        <span style={{ color: '#ef4444', fontWeight: 600 }}>vs</span>
+                        {v.conflicts.map((c, ci) => (
+                          <span key={ci} style={{
+                            background: '#7f1d1d',
+                            color: '#fca5a5',
+                            padding: '1px 5px',
+                            borderRadius: 3,
+                            fontSize: 9,
+                          }}>
+                            {c}
+                          </span>
+                        ))}
                       </div>
                     )}
                   </td>
