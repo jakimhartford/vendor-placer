@@ -36,8 +36,16 @@ export function saveSpots(geojson) {
   return api.put('/api/spots', geojson).then((res) => res.data);
 }
 
+export function clearSpots() {
+  return api.delete('/api/spots').then((res) => res.data);
+}
+
 export function generateGrid(params) {
   return api.post('/api/spots/generate-grid', params).then((res) => res.data);
+}
+
+export function generateFromPath(params) {
+  return api.post('/api/spots/generate-from-path', params).then((res) => res.data);
 }
 
 // ---------- Placements ----------

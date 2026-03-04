@@ -1,11 +1,11 @@
-name,category,tier,exclusions
-Tie Dye Dreams,clothing,silver,
-Quick Caricatures,services,silver,
-Sunset Paintings,art,bronze,
-Color Splash Studio,art,gold,
-Face Paint Fantasy,services,silver,
-Handmade Haven,craft,gold,
-Joe's BBQ,food,bronze,
-Ocean Brush Art,art,bronze,
-The Canvas Collective,art,silver,
-Thread & Needle,clothing,platinum,
+name,category,tier,exclusions,conflicts,premium
+Tie Dye Dreams,clothing,silver,,,
+Quick Caricatures,services,silver,,Face Paint Fantasy,
+Sunset Paintings,art,bronze,,,
+Color Splash Studio,art,gold,,,yes
+Face Paint Fantasy,services,silver,,Quick Caricatures,
+Handmade Haven,craft,gold,,,yes
+Joe's BBQ,food,bronze,,,
+Ocean Brush Art,art,bronze,,,
+The Canvas Collective,art,silver,,,
+Thread & Needle,clothing,platinum,,,yes

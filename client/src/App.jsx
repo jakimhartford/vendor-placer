@@ -24,6 +24,8 @@ export default function App() {
     loadSpots,
     saveSpots,
     generateGrid,
+    generateFromPath,
+    clearSpots,
   } = useSpots();
 
   const {
@@ -32,6 +34,15 @@ export default function App() {
     runPlacement,
     clearPlacements,
   } = usePlacements();
+
+  // Street path state
+  const [paths, setPaths] = useState([]);
+  const [streetDrawMode, setStreetDrawMode] = useState(false);
+  const [streetParams, setStreetParams] = useState({ spotSizeFt: 12, rows: 1 });
+
+  // Label counter for auto-incrementing street labels
+  const [pathLabelIdx, setPathLabelIdx] = useState(0);
+  const LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
   // Load initial data
   useEffect(() => {
@@ -48,9 +59,49 @@ export default function App() {
     await saveSpots(geojson);
   };
 
+  const handleToggleStreetDraw = (params) => {
+    if (streetDrawMode) {
+      setStreetDrawMode(false);
+    } else {
+      setStreetParams(params);
+      setStreetDrawMode(true);
+    }
+  };
+
+  const handlePathDrawn = useCallback(
+    async (coords) => {
+      setPaths((prev) => [...prev, coords]);
+      setStreetDrawMode(false);
+
+      const label = LABELS[pathLabelIdx % LABELS.length];
+      setPathLabelIdx((prev) => prev + 1);
+
+      await generateFromPath({
+        path: coords,
+        spotSizeFt: streetParams.spotSizeFt,
+        spacingFt: 2,
+        rows: streetParams.rows,
+        offsetFt: 15,
+        label,
+      });
+    },
+    [streetParams, pathLabelIdx, generateFromPath]
+  );
+
+  const handleClearPaths = () => {
+    setPaths([]);
+    setPathLabelIdx(0);
+  };
+
+  const handleClearGrid = async () => {
+    await clearSpots();
+    setPaths([]);
+    setPathLabelIdx(0);
+    clearPlacements();
+  };
+
   const [selectedVendorId, setSelectedVendorId] = useState(null);
 
-  // Find the spotId for a selected vendor so the map can highlight/pan to it
   const selectedSpotId = selectedVendorId
     ? Object.entries(placements.assignments || {}).find(
         ([, vid]) => vid === selectedVendorId
@@ -84,8 +135,13 @@ export default function App() {
             onGenerateGrid={generateGrid}
             onRunPlacement={runPlacement}
             onClearVendors={handleClearVendors}
+            onClearGrid={handleClearGrid}
             loading={loading}
             spotCount={spots?.features?.length || 0}
+            streetDrawMode={streetDrawMode}
+            onToggleStreetDraw={handleToggleStreetDraw}
+            onClearPaths={handleClearPaths}
+            pathCount={paths.length}
           />
         </div>
 
@@ -113,6 +169,10 @@ export default function App() {
           assignments={placements.assignments}
           onSpotsChange={handleSpotsChange}
           selectedSpotId={selectedSpotId}
+          paths={paths}
+          onPathDrawn={handlePathDrawn}
+          streetDrawMode={streetDrawMode}
+          onStreetDrawModeChange={setStreetDrawMode}
         />
       </main>
     </div>

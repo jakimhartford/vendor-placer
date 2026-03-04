@@ -1,5 +1,5 @@
 export const MAP_CENTER = [29.2078, -81.023];
-export const DEFAULT_ZOOM = 17;
+export const DEFAULT_ZOOM = 19;
 
 export const CATEGORIES = [
   'food',

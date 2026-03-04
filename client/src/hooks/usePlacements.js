@@ -14,15 +14,17 @@ export default function usePlacements() {
     setLoading(true);
     try {
       const data = await apiRunPlacement();
-      // Convert assignments array [{vendorId, spotId}] to map {spotId: vendorId}
-      const assignmentsArr = data.assignments || [];
-      const assignmentsMap = {};
-      if (Array.isArray(assignmentsArr)) {
-        assignmentsArr.forEach((a) => { assignmentsMap[a.spotId] = a.vendorId; });
+      // Handle both array [{vendorId, spotId}] and object {spotId: vendorId} formats
+      const raw = data.assignments || {};
+      let assignmentsMap;
+      if (Array.isArray(raw)) {
+        assignmentsMap = {};
+        raw.forEach((a) => { assignmentsMap[a.spotId] = a.vendorId; });
+      } else {
+        assignmentsMap = raw;
       }
       const result = {
         assignments: assignmentsMap,
-        assignmentsArray: assignmentsArr,
         unplaced: data.unplaced || [],
         conflicts: data.conflicts || [],
       };
@@ -37,14 +39,16 @@ export default function usePlacements() {
     setLoading(true);
     try {
       const data = await fetchPlacements();
-      const arr = data.assignments || [];
-      const map = {};
-      if (Array.isArray(arr)) {
-        arr.forEach((a) => { map[a.spotId] = a.vendorId; });
+      const raw = data.assignments || {};
+      let map;
+      if (Array.isArray(raw)) {
+        map = {};
+        raw.forEach((a) => { map[a.spotId] = a.vendorId; });
+      } else {
+        map = raw;
       }
       setPlacements({
         assignments: map,
-        assignmentsArray: arr,
         unplaced: data.unplaced || [],
         conflicts: data.conflicts || [],
       });

@@ -3,6 +3,8 @@ import {
   fetchSpots,
   saveSpots as apiSaveSpots,
   generateGrid as apiGenerateGrid,
+  generateFromPath as apiGenerateFromPath,
+  clearSpots as apiClearSpots,
 } from '../api/index.js';
 
 const EMPTY_FC = { type: 'FeatureCollection', features: [] };
@@ -57,5 +59,36 @@ export default function useSpots() {
     [loadSpots]
   );
 
-  return { spots, loading, loadSpots, saveSpots, generateGrid };
+  const generateFromPath = useCallback(
+    async (params) => {
+      setLoading(true);
+      try {
+        const data = await apiGenerateFromPath(params);
+        if (data.spotsGeoJSON && data.spotsGeoJSON.type === 'FeatureCollection') {
+          setSpots(data.spotsGeoJSON);
+        } else {
+          await loadSpots();
+        }
+      } catch (err) {
+        console.error('generateFromPath error:', err);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loadSpots]
+  );
+
+  const clearSpots = useCallback(async () => {
+    setLoading(true);
+    try {
+      await apiClearSpots();
+      setSpots(EMPTY_FC);
+    } catch (err) {
+      console.error('clearSpots error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { spots, loading, loadSpots, saveSpots, generateGrid, generateFromPath, clearSpots };
 }

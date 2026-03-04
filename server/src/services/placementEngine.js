@@ -6,15 +6,27 @@ const TIER_PRIORITY = { platinum: 4, gold: 3, silver: 2, bronze: 1 };
 const NO_SAME_CATEGORY_NEIGHBOR = new Set(['art', 'craft', 'jewelry', 'clothing']);
 
 /**
+ * Build a name->vendor lookup for conflict resolution by name.
+ */
+function buildNameMap(vendors) {
+  const map = new Map();
+  for (const v of vendors) {
+    map.set(v.name.toLowerCase(), v);
+  }
+  return map;
+}
+
+/**
  * Check whether placing `vendor` on `spot` violates any constraints.
  *
  * @param {object} vendor
  * @param {object} spot           - spot feature properties
  * @param {Map}    adjacencyMap   - spotId -> Set<spotId>
  * @param {Map}    assignmentMap  - spotId -> vendor
- * @returns {boolean} true if placement is allowed
+ * @param {Map}    nameMap        - vendorName (lowercase) -> vendor
+ * @returns {{ allowed: boolean, reason?: string }}
  */
-function canPlace(vendor, spot, adjacencyMap, assignmentMap) {
+function canPlace(vendor, spot, adjacencyMap, assignmentMap, nameMap) {
   const neighborSpotIds = adjacencyMap.get(spot.id) || new Set();
 
   for (const nSpotId of neighborSpotIds) {
@@ -25,10 +37,13 @@ function canPlace(vendor, spot, adjacencyMap, assignmentMap) {
     for (const excl of vendor.exclusions) {
       if (excl.startsWith('cat:')) {
         const exclCat = excl.slice(4).toLowerCase();
-        if (neighborVendor.category === exclCat) return false;
+        if (neighborVendor.category === exclCat) {
+          return { allowed: false, reason: `${vendor.name} excludes category "${exclCat}" (neighbor: ${neighborVendor.name})` };
+        }
       } else {
-        // Exclusion by vendor id
-        if (neighborVendor.id === excl) return false;
+        if (neighborVendor.id === excl) {
+          return { allowed: false, reason: `${vendor.name} excludes vendor ${neighborVendor.name}` };
+        }
       }
     }
 
@@ -36,9 +51,30 @@ function canPlace(vendor, spot, adjacencyMap, assignmentMap) {
     for (const excl of neighborVendor.exclusions) {
       if (excl.startsWith('cat:')) {
         const exclCat = excl.slice(4).toLowerCase();
-        if (vendor.category === exclCat) return false;
+        if (vendor.category === exclCat) {
+          return { allowed: false, reason: `${neighborVendor.name} excludes category "${exclCat}" (vendor: ${vendor.name})` };
+        }
       } else {
-        if (vendor.id === excl) return false;
+        if (vendor.id === excl) {
+          return { allowed: false, reason: `${neighborVendor.name} excludes vendor ${vendor.name}` };
+        }
+      }
+    }
+
+    // Check name-based conflicts (bidirectional)
+    const vendorConflicts = vendor.conflicts || [];
+    for (const conflictName of vendorConflicts) {
+      const conflictVendor = nameMap.get(conflictName.toLowerCase());
+      if (conflictVendor && neighborVendor.id === conflictVendor.id) {
+        return { allowed: false, reason: `${vendor.name} conflicts with ${neighborVendor.name}` };
+      }
+    }
+
+    const neighborConflicts = neighborVendor.conflicts || [];
+    for (const conflictName of neighborConflicts) {
+      const conflictVendor = nameMap.get(conflictName.toLowerCase());
+      if (conflictVendor && vendor.id === conflictVendor.id) {
+        return { allowed: false, reason: `${neighborVendor.name} conflicts with ${vendor.name}` };
       }
     }
 
@@ -47,35 +83,36 @@ function canPlace(vendor, spot, adjacencyMap, assignmentMap) {
       NO_SAME_CATEGORY_NEIGHBOR.has(vendor.category) &&
       neighborVendor.category === vendor.category
     ) {
-      return false;
+      return { allowed: false, reason: `Same category "${vendor.category}" adjacent: ${vendor.name} & ${neighborVendor.name}` };
     }
   }
 
-  return true;
+  return { allowed: true };
 }
 
 /**
  * Run the placement algorithm.
  *
+ * Priority order:
+ *   1. Premium vendors -> corner/high-traffic spots (regardless of tier)
+ *   2. Platinum/Gold vendors -> remaining corner spots
+ *   3. All remaining vendors by tier -> remaining spots by score
+ *
  * @param {object[]} vendors         - array of vendor objects
  * @param {object}   spotsGeoJSON    - GeoJSON FeatureCollection
- * @returns {{ assignments: {vendorId: string, spotId: string}[], unplaced: string[], conflicts: any[] }}
+ * @returns {{ assignments: object, unplaced: string[], conflicts: string[] }}
  */
 export function runPlacement(vendors, spotsGeoJSON) {
   if (!vendors.length || !spotsGeoJSON.features.length) {
     return {
-      assignments: [],
+      assignments: {},
       unplaced: vendors.map((v) => v.id),
       conflicts: [],
     };
   }
 
   const adjacencyMap = buildAdjacencyMap(spotsGeoJSON);
-
-  // Sort vendors by tier priority descending
-  const sortedVendors = [...vendors].sort(
-    (a, b) => (TIER_PRIORITY[b.tier] || 0) - (TIER_PRIORITY[a.tier] || 0)
-  );
+  const nameMap = buildNameMap(vendors);
 
   // Build scored spot list — higher is more desirable
   const spotProps = spotsGeoJSON.features.map((f) => f.properties);
@@ -86,55 +123,72 @@ export function runPlacement(vendors, spotsGeoJSON) {
     }))
     .sort((a, b) => b.score - a.score);
 
-  // Track which spots are taken
+  const premiumSpots = scoredSpots.filter((s) => s.isCorner || (s.trafficScore || 0) >= 7);
+
+  // Track state
   const usedSpotIds = new Set();
-  // spotId -> vendor  (for adjacency constraint checks)
-  const assignmentMap = new Map();
-
-  const assignments = [];
+  const assignmentMap = new Map();  // spotId -> vendor
+  const assignments = {};           // spotId -> vendorId
+  const assignedVendorIds = new Set();
   const unplaced = [];
+  const conflicts = [];
 
-  // Phase 1 — assign corner spots to top-tier vendors
-  const cornerSpots = scoredSpots.filter((s) => s.isCorner);
-  const phase1Vendors = sortedVendors.filter(
-    (v) => v.tier === 'platinum' || v.tier === 'gold'
-  );
-
-  let vendorIdx = 0;
-  for (const spot of cornerSpots) {
-    if (vendorIdx >= phase1Vendors.length) break;
-    const vendor = phase1Vendors[vendorIdx];
-    if (canPlace(vendor, spot, adjacencyMap, assignmentMap)) {
-      assignments.push({ vendorId: vendor.id, spotId: spot.id });
-      usedSpotIds.add(spot.id);
-      assignmentMap.set(spot.id, vendor);
-      vendorIdx++;
-    }
-  }
-
-  const assignedVendorIds = new Set(assignments.map((a) => a.vendorId));
-
-  // Phase 2 — assign remaining vendors to remaining spots
-  for (const vendor of sortedVendors) {
-    if (assignedVendorIds.has(vendor.id)) continue;
-
-    let placed = false;
-    for (const spot of scoredSpots) {
+  function tryAssign(vendor, spotList) {
+    for (const spot of spotList) {
       if (usedSpotIds.has(spot.id)) continue;
-      if (canPlace(vendor, spot, adjacencyMap, assignmentMap)) {
-        assignments.push({ vendorId: vendor.id, spotId: spot.id });
+      const result = canPlace(vendor, spot, adjacencyMap, assignmentMap, nameMap);
+      if (result.allowed) {
+        assignments[spot.id] = vendor.id;
         usedSpotIds.add(spot.id);
         assignmentMap.set(spot.id, vendor);
         assignedVendorIds.add(vendor.id);
-        placed = true;
-        break;
+        return true;
       }
     }
+    return false;
+  }
 
-    if (!placed) {
-      unplaced.push(vendor.id);
+  // Sort vendors by tier priority descending
+  const sortedVendors = [...vendors].sort(
+    (a, b) => (TIER_PRIORITY[b.tier] || 0) - (TIER_PRIORITY[a.tier] || 0)
+  );
+
+  // Phase 1: Premium vendors get first pick of corner/high-traffic spots
+  const premiumVendors = sortedVendors.filter((v) => v.premium);
+  for (const vendor of premiumVendors) {
+    if (!tryAssign(vendor, premiumSpots)) {
+      // Fallback: try any spot
+      tryAssign(vendor, scoredSpots);
     }
   }
 
-  return { assignments, unplaced, conflicts: [] };
+  // Phase 2: Platinum/Gold vendors get remaining corner spots
+  const topTierVendors = sortedVendors.filter(
+    (v) => !assignedVendorIds.has(v.id) && (v.tier === 'platinum' || v.tier === 'gold')
+  );
+  const cornerSpots = scoredSpots.filter((s) => s.isCorner);
+  for (const vendor of topTierVendors) {
+    if (!tryAssign(vendor, cornerSpots)) {
+      // Will be handled in phase 3
+    }
+  }
+
+  // Phase 3: All remaining vendors by tier priority
+  for (const vendor of sortedVendors) {
+    if (assignedVendorIds.has(vendor.id)) continue;
+    if (!tryAssign(vendor, scoredSpots)) {
+      unplaced.push(vendor.id);
+      // Check why they couldn't be placed
+      for (const spot of scoredSpots) {
+        if (usedSpotIds.has(spot.id)) continue;
+        const result = canPlace(vendor, spot, adjacencyMap, assignmentMap, nameMap);
+        if (!result.allowed) {
+          conflicts.push(result.reason);
+          break;
+        }
+      }
+    }
+  }
+
+  return { assignments, unplaced, conflicts };
 }

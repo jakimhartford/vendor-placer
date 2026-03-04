@@ -6,6 +6,7 @@ const VALID_TIERS = ['platinum', 'gold', 'silver', 'bronze'];
 /**
  * Parse a CSV string into an array of vendor objects.
  * Expected CSV columns: name, category, tier, exclusions (pipe-separated)
+ * Optional columns: conflicts (pipe-separated vendor names), premium (yes/no)
  */
 export function parseVendorCsv(csvString) {
   const result = Papa.parse(csvString.trim(), {
@@ -46,7 +47,17 @@ export function parseVendorCsv(csvString) {
       ? exclusionsRaw.split('|').map((e) => e.trim()).filter(Boolean)
       : [];
 
-    return { name, category, tier, exclusions };
+    // Conflicts: pipe-separated vendor names who should NOT be placed adjacent
+    const conflictsRaw = (row.conflicts || '').trim();
+    const conflicts = conflictsRaw
+      ? conflictsRaw.split('|').map((c) => c.trim()).filter(Boolean)
+      : [];
+
+    // Premium: vendor paid for a corner/high-traffic spot
+    const premiumRaw = (row.premium || '').trim().toLowerCase();
+    const premium = premiumRaw === 'yes' || premiumRaw === 'true' || premiumRaw === '1';
+
+    return { name, category, tier, exclusions, conflicts, premium };
   });
 
   return vendors;

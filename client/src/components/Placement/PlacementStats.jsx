@@ -3,7 +3,7 @@ import { TIERS } from '../../utils/constants.js';
 import { TIER_COLORS } from '../../utils/tierColors.js';
 
 export default function PlacementStats({ placements, vendors }) {
-  const { assignments = {}, unplaced = [] } = placements || {};
+  const { assignments = {}, unplaced = [], conflicts = [] } = placements || {};
   const assignedCount = Object.keys(assignments).length;
   const totalVendors = vendors?.length || 0;
   const placedVendorIds = new Set(Object.values(assignments));
@@ -75,6 +75,20 @@ export default function PlacementStats({ placements, vendors }) {
           </div>
         ))}
       </div>
+
+      {conflicts.length > 0 && (
+        <div style={{ marginTop: 10, padding: '6px 8px', background: '#451a03', borderRadius: 6 }}>
+          <p style={{ fontSize: 11, color: '#fbbf24', fontWeight: 600, marginBottom: 4 }}>
+            Conflicts ({conflicts.length})
+          </p>
+          {conflicts.slice(0, 5).map((c, i) => (
+            <p key={i} style={{ fontSize: 10, color: '#f59e0b', margin: '2px 0' }}>{c}</p>
+          ))}
+          {conflicts.length > 5 && (
+            <p style={{ fontSize: 10, color: '#92400e' }}>+{conflicts.length - 5} more</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
