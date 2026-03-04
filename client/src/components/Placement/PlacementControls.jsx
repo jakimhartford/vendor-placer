@@ -14,14 +14,9 @@ export default function PlacementControls({
   loading,
   spotCount,
   filledCount,
-  streetDrawMode,
-  onToggleStreetDraw,
-  onClearPaths,
-  pathCount,
 }) {
   const [gridArea, setGridArea] = useState('both');
   const [rows, setRows] = useState(1);
-  const [spotSizeFt, setSpotSizeFt] = useState(12);
 
   const vacantCount = spotCount - (filledCount || 0);
 
@@ -47,55 +42,6 @@ export default function PlacementControls({
           </div>
         </div>
       )}
-
-      {/* Draw Street section */}
-      <label style={{ fontSize: 11, color: '#94a3b8', display: 'block', marginBottom: 4 }}>
-        Draw a line for each row of vendor spots
-      </label>
-
-      <div style={{ marginBottom: 6 }}>
-        <label style={{ fontSize: 10, color: '#64748b', display: 'block', marginBottom: 2 }}>
-          Spot size (ft)
-        </label>
-        <input
-          type="number"
-          value={spotSizeFt}
-          onChange={(e) => setSpotSizeFt(Number(e.target.value) || 12)}
-          min={6}
-          max={20}
-          style={{ width: 80, padding: '3px 6px', fontSize: 12, boxSizing: 'border-box' }}
-        />
-      </div>
-
-      <button
-        className="btn"
-        disabled={loading}
-        onClick={() => onToggleStreetDraw({ spotSizeFt, rows: 1 })}
-        style={{
-          background: streetDrawMode ? '#dc2626' : '#facc15',
-          color: streetDrawMode ? '#fff' : '#000',
-          fontWeight: 600,
-        }}
-      >
-        {streetDrawMode ? 'Cancel Street Draw' : 'Draw Street'}
-      </button>
-
-      {pathCount > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-          <span style={{ fontSize: 11, color: '#94a3b8' }}>
-            {pathCount} line{pathCount !== 1 ? 's' : ''} drawn
-          </span>
-          <button
-            className="btn btn-secondary"
-            style={{ padding: '2px 8px', fontSize: 11, width: 'auto', marginBottom: 0 }}
-            onClick={onClearPaths}
-          >
-            Clear
-          </button>
-        </div>
-      )}
-
-      <hr style={{ border: 'none', borderTop: '1px solid #334155', margin: '10px 0' }} />
 
       {/* Grid generation */}
       <label style={{ fontSize: 11, color: '#94a3b8', display: 'block', marginBottom: 4 }}>

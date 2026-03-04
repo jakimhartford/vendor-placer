@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Polygon, Polyline, Tooltip, useMap } from 'react-leaflet';
+import { Polygon, Tooltip, useMap } from 'react-leaflet';
 import { getSpotColor } from '../../utils/tierColors.js';
 
 function featureToPositions(feature) {
@@ -41,10 +41,8 @@ function SelectedSpotPanner({ selectedSpotId, spots }) {
   return null;
 }
 
-export default function SpotLayer({ spots, vendors, assignments, selectedSpotId, paths }) {
-  const hasSpots = spots?.features?.length > 0;
-  const hasPaths = paths?.length > 0;
-  if (!hasSpots && !hasPaths) return null;
+export default function SpotLayer({ spots, vendors, assignments, selectedSpotId }) {
+  if (!spots?.features?.length) return null;
 
   const vendorMap = {};
   (vendors || []).forEach((v) => {
@@ -54,20 +52,7 @@ export default function SpotLayer({ spots, vendors, assignments, selectedSpotId,
   return (
     <>
       <SelectedSpotPanner selectedSpotId={selectedSpotId} spots={spots} />
-      {/* Render drawn street paths as dashed lines */}
-      {(paths || []).map((pathCoords, i) => (
-        <Polyline
-          key={`path-${i}`}
-          positions={pathCoords.map(([lng, lat]) => [lat, lng])}
-          pathOptions={{
-            color: '#ffffff',
-            weight: 2,
-            dashArray: '8,6',
-            opacity: 0.7,
-          }}
-        />
-      ))}
-      {(spots?.features || []).map((feature, idx) => {
+      {spots.features.map((feature, idx) => {
         if (!feature.geometry || feature.geometry.type !== 'Polygon') {
           return null;
         }

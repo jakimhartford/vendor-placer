@@ -22,9 +22,7 @@ export default function App() {
     spots,
     loading: spotsLoading,
     loadSpots,
-    saveSpots,
     generateGrid,
-    generateFromPath,
     clearSpots,
   } = useSpots();
 
@@ -35,15 +33,6 @@ export default function App() {
     clearPlacements,
     updateAssignments,
   } = usePlacements();
-
-  // Street path state
-  const [paths, setPaths] = useState([]);
-  const [streetDrawMode, setStreetDrawMode] = useState(false);
-  const [streetParams, setStreetParams] = useState({ spotSizeFt: 12, rows: 1 });
-
-  // Label counter for auto-incrementing street labels
-  const [pathLabelIdx, setPathLabelIdx] = useState(0);
-  const LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
   // Load initial data
   useEffect(() => {
@@ -56,46 +45,8 @@ export default function App() {
     clearPlacements();
   };
 
-  const handleSpotsChange = async (geojson) => {
-    await saveSpots(geojson);
-  };
-
-  const handleToggleStreetDraw = (params) => {
-    if (streetDrawMode) {
-      setStreetDrawMode(false);
-    } else {
-      setStreetParams(params);
-      setStreetDrawMode(true);
-    }
-  };
-
-  const handlePathDrawn = useCallback(
-    async (coords) => {
-      setPaths((prev) => [...prev, coords]);
-      setStreetDrawMode(false);
-
-      const label = LABELS[pathLabelIdx % LABELS.length];
-      setPathLabelIdx((prev) => prev + 1);
-
-      await generateFromPath({
-        path: coords,
-        spotSizeFt: streetParams.spotSizeFt,
-        spacingFt: 2,
-        label,
-      });
-    },
-    [streetParams, pathLabelIdx, generateFromPath]
-  );
-
-  const handleClearPaths = () => {
-    setPaths([]);
-    setPathLabelIdx(0);
-  };
-
   const handleClearGrid = async () => {
     await clearSpots();
-    setPaths([]);
-    setPathLabelIdx(0);
     clearPlacements();
   };
 
@@ -113,14 +64,12 @@ export default function App() {
 
   const handleReassign = useCallback((vendorId, newSpotId) => {
     const current = { ...(placements.assignments || {}) };
-    // Remove vendor from current spot
     for (const [spotId, vid] of Object.entries(current)) {
       if (vid === vendorId) {
         delete current[spotId];
         break;
       }
     }
-    // Assign to new spot
     current[newSpotId] = vendorId;
     updateAssignments(current);
   }, [placements, updateAssignments]);
@@ -152,10 +101,6 @@ export default function App() {
             loading={loading}
             spotCount={spots?.features?.length || 0}
             filledCount={Object.keys(placements.assignments || {}).length}
-            streetDrawMode={streetDrawMode}
-            onToggleStreetDraw={handleToggleStreetDraw}
-            onClearPaths={handleClearPaths}
-            pathCount={paths.length}
           />
         </div>
 
@@ -183,9 +128,6 @@ export default function App() {
           vendors={vendors}
           assignments={placements.assignments}
           selectedSpotId={selectedSpotId}
-          paths={paths}
-          onPathDrawn={handlePathDrawn}
-          streetDrawMode={streetDrawMode}
         />
       </main>
     </div>
