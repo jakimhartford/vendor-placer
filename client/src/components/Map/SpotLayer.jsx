@@ -1,25 +1,22 @@
 import React, { useEffect, useRef } from 'react';
-import { Rectangle, Polyline, Tooltip, useMap } from 'react-leaflet';
+import { Polygon, Polyline, Tooltip, useMap } from 'react-leaflet';
 import { getSpotColor } from '../../utils/tierColors.js';
 
-function featureToBounds(feature) {
+function featureToPositions(feature) {
+  // Convert GeoJSON [lng, lat] ring to Leaflet [lat, lng] positions
   const coords = feature.geometry.coordinates[0];
-  let minLat = Infinity,
-    maxLat = -Infinity,
-    minLng = Infinity,
-    maxLng = -Infinity;
+  return coords.map(([lng, lat]) => [lat, lng]);
+}
 
-  for (const [lng, lat] of coords) {
-    if (lat < minLat) minLat = lat;
-    if (lat > maxLat) maxLat = lat;
-    if (lng < minLng) minLng = lng;
-    if (lng > maxLng) maxLng = lng;
+function featureCenter(feature) {
+  const coords = feature.geometry.coordinates[0];
+  const n = coords.length - 1; // exclude closing point
+  let latSum = 0, lngSum = 0;
+  for (let i = 0; i < n; i++) {
+    lngSum += coords[i][0];
+    latSum += coords[i][1];
   }
-
-  return [
-    [minLat, minLng],
-    [maxLat, maxLng],
-  ];
+  return [latSum / n, lngSum / n];
 }
 
 function SelectedSpotPanner({ selectedSpotId, spots }) {
@@ -34,10 +31,8 @@ function SelectedSpotPanner({ selectedSpotId, spots }) {
     if (!feature) return;
 
     try {
-      const bounds = featureToBounds(feature);
-      const centerLat = (bounds[0][0] + bounds[1][0]) / 2;
-      const centerLng = (bounds[0][1] + bounds[1][1]) / 2;
-      map.flyTo([centerLat, centerLng], 19, { duration: 0.5 });
+      const [lat, lng] = featureCenter(feature);
+      map.flyTo([lat, lng], 19, { duration: 0.5 });
     } catch {
       // ignore
     }
@@ -83,17 +78,17 @@ export default function SpotLayer({ spots, vendors, assignments, selectedSpotId,
         const assignedVendor = assignedVendorId ? vendorMap[assignedVendorId] : null;
         const isSelected = spotId === selectedSpotId;
 
-        let bounds;
+        let positions;
         try {
-          bounds = featureToBounds(feature);
+          positions = featureToPositions(feature);
         } catch {
           return null;
         }
 
         return (
-          <Rectangle
+          <Polygon
             key={spotId}
-            bounds={bounds}
+            positions={positions}
             pathOptions={{
               color: isSelected ? '#facc15' : color,
               weight: isSelected ? 4 : 2,
@@ -122,7 +117,7 @@ export default function SpotLayer({ spots, vendors, assignments, selectedSpotId,
                 )}
               </div>
             </Tooltip>
-          </Rectangle>
+          </Polygon>
         );
       })}
     </>

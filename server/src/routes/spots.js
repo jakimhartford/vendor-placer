@@ -209,15 +209,27 @@ function angleBetween(a, b, c) {
   return Math.acos(Math.min(1, Math.max(-1, dot / (mag1 * mag2)))) * (180 / Math.PI);
 }
 
-function makeSpotRect(centerLat, centerLng, halfW, halfH) {
+/**
+ * Build a rotated rectangle polygon aligned to a street direction.
+ * tangent = unit vector along street (in degree units per foot)
+ * normal  = unit vector perpendicular to street (in degree units per foot)
+ */
+function makeRotatedSpotRect(centerLng, centerLat, halfSizeFt, tangentLng, tangentLat, normalLng, normalLat) {
+  // Half-size along tangent (parallel to street) and normal (perpendicular)
+  const tLng = halfSizeFt * tangentLng;
+  const tLat = halfSizeFt * tangentLat;
+  const nLng = halfSizeFt * normalLng;
+  const nLat = halfSizeFt * normalLat;
+
+  // Four corners: center +/- tangent +/- normal
   return {
     type: 'Polygon',
     coordinates: [[
-      [centerLng - halfW, centerLat - halfH],
-      [centerLng + halfW, centerLat - halfH],
-      [centerLng + halfW, centerLat + halfH],
-      [centerLng - halfW, centerLat + halfH],
-      [centerLng - halfW, centerLat - halfH],
+      [centerLng - tLng - nLng, centerLat - tLat - nLat],
+      [centerLng + tLng - nLng, centerLat + tLat - nLat],
+      [centerLng + tLng + nLng, centerLat + tLat + nLat],
+      [centerLng - tLng + nLng, centerLat - tLat + nLat],
+      [centerLng - tLng - nLng, centerLat - tLat - nLat], // close
     ]],
   };
 }
@@ -225,13 +237,12 @@ function makeSpotRect(centerLat, centerLng, halfW, halfH) {
 function generateSpotsFromPath(path, { spotSizeFt = 12, spacingFt = 2, rows = 1, offsetFt = 15, label = 'S' }) {
   const features = [];
   const stepFt = spotSizeFt + spacingFt;
-  const halfSpotLat = (spotSizeFt / 2) * FT_TO_LAT;
-  const halfSpotLng = (spotSizeFt / 2) * FT_TO_LNG;
+  const halfSizeFt = spotSizeFt / 2;
 
-  // Walk the path at stepFt intervals, collecting positions and perpendicular directions
+  // Walk the path at stepFt intervals, collecting positions and direction vectors
   const positions = [];
   let accumulated = 0;
-  let nextMark = spotSizeFt / 2; // start half-spot in
+  let nextMark = halfSizeFt; // start half-spot in
 
   for (let i = 0; i < path.length - 1; i++) {
     const segStart = path[i];
@@ -239,15 +250,26 @@ function generateSpotsFromPath(path, { spotSizeFt = 12, spacingFt = 2, rows = 1,
     const segLen = distance(segStart, segEnd);
     if (segLen === 0) continue;
 
-    // Direction along segment
+    // Direction along segment (in raw degree deltas)
     const dx = segEnd[0] - segStart[0];
     const dy = segEnd[1] - segStart[1];
-    // Perpendicular (right-hand normal)
-    const perpLng = -dy;
-    const perpLat = dx;
-    const perpMag = Math.sqrt((perpLng / FT_TO_LNG) ** 2 + (perpLat / FT_TO_LAT) ** 2);
-    const normLng = perpLng / perpMag; // per foot in lng
-    const normLat = perpLat / perpMag; // per foot in lat
+
+    // Tangent unit vector (per foot, in degrees)
+    const tangentLng = dx / segLen * FT_TO_LNG / FT_TO_LNG;  // normalize properly
+    const tangentLat = dy / segLen * FT_TO_LAT / FT_TO_LAT;
+    // Actually, let's compute properly using feet-normalized components:
+    const dxFt = dx / FT_TO_LNG; // segment dx in feet
+    const dyFt = dy / FT_TO_LAT; // segment dy in feet
+    const magFt = Math.sqrt(dxFt * dxFt + dyFt * dyFt);
+
+    // Tangent: unit vector along street, scaled to "1 foot" in degree coords
+    const tanLng = (dxFt / magFt) * FT_TO_LNG;
+    const tanLat = (dyFt / magFt) * FT_TO_LAT;
+
+    // Normal: perpendicular (rotate tangent 90° CW in map coords)
+    // In feet-space: perp of (dxFt, dyFt) is (-dyFt, dxFt)
+    const normLng = (-dyFt / magFt) * FT_TO_LNG;
+    const normLat = (dxFt / magFt) * FT_TO_LAT;
 
     // Check for corner (bend) at this vertex
     let isVertexCorner = false;
@@ -256,20 +278,18 @@ function generateSpotsFromPath(path, { spotSizeFt = 12, spacingFt = 2, rows = 1,
       if (bend > 30) isVertexCorner = true;
     }
 
-    let pos = accumulated;
-    while (pos + (stepFt - spotSizeFt / 2) <= accumulated + segLen && nextMark <= accumulated + segLen) {
+    while (nextMark <= accumulated + segLen) {
       const t = (nextMark - accumulated) / segLen;
       const pt = interpolate(segStart, segEnd, t);
 
       const isFirst = positions.length === 0;
       positions.push({
         point: pt,
-        normLng: normLng * FT_TO_LNG,
-        normLat: normLat * FT_TO_LAT,
+        tanLng, tanLat,
+        normLng, normLat,
         isCorner: isFirst || isVertexCorner,
       });
-      isVertexCorner = false; // only mark once
-
+      isVertexCorner = false;
       nextMark += stepFt;
     }
     accumulated += segLen;
@@ -297,7 +317,8 @@ function generateSpotsFromPath(path, { spotSizeFt = 12, spacingFt = 2, rows = 1,
       const rowOffsetFt = offsetFt + r * stepFt;
 
       for (let c = 0; c < positions.length; c++) {
-        const { point, normLng, normLat, isCorner } = positions[c];
+        const { point, tanLng, tanLat, normLng, normLat, isCorner } = positions[c];
+        // Offset center perpendicular to street
         const centerLng = point[0] + mult * rowOffsetFt * normLng;
         const centerLat = point[1] + mult * rowOffsetFt * normLat;
 
@@ -305,7 +326,7 @@ function generateSpotsFromPath(path, { spotSizeFt = 12, spacingFt = 2, rows = 1,
 
         features.push({
           type: 'Feature',
-          geometry: makeSpotRect(centerLat, centerLng, halfSpotLng, halfSpotLat),
+          geometry: makeRotatedSpotRect(centerLng, centerLat, halfSizeFt, tanLng, tanLat, normLng, normLat),
           properties: {
             id: crypto.randomUUID(),
             label: `${label}${sideLabel}${r + 1}${String(c + 1).padStart(2, '0')}`,
