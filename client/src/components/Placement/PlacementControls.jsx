@@ -13,6 +13,7 @@ export default function PlacementControls({
   onClearGrid,
   loading,
   spotCount,
+  filledCount,
   streetDrawMode,
   onToggleStreetDraw,
   onClearPaths,
@@ -20,53 +21,56 @@ export default function PlacementControls({
 }) {
   const [gridArea, setGridArea] = useState('both');
   const [rows, setRows] = useState(1);
-  const [streetRows, setStreetRows] = useState(1);
   const [spotSizeFt, setSpotSizeFt] = useState(12);
+
+  const vacantCount = spotCount - (filledCount || 0);
 
   return (
     <div>
-      {/* Draw Street section */}
-      <label style={{ fontSize: 11, color: '#94a3b8', display: 'block', marginBottom: 4 }}>
-        Draw streets to auto-generate spots
-      </label>
-
-      <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-        <div style={{ flex: 1 }}>
-          <label style={{ fontSize: 10, color: '#64748b', display: 'block', marginBottom: 2 }}>
-            Spot ft
-          </label>
-          <input
-            type="number"
-            value={spotSizeFt}
-            onChange={(e) => setSpotSizeFt(Number(e.target.value) || 12)}
-            min={6}
-            max={20}
-            style={{ width: '100%', padding: '3px 6px', fontSize: 12, boxSizing: 'border-box' }}
-          />
-        </div>
-        <div style={{ flex: 1 }}>
-          <label style={{ fontSize: 10, color: '#64748b', display: 'block', marginBottom: 2 }}>
-            Rows/side
-          </label>
-          <div style={{ display: 'flex', gap: 3 }}>
-            {[1, 2, 3].map((n) => (
-              <button
-                key={n}
-                className={`btn ${streetRows === n ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ width: 'auto', flex: 1, padding: '2px 6px', fontSize: 11, marginBottom: 0 }}
-                onClick={() => setStreetRows(n)}
-              >
-                {n}
-              </button>
-            ))}
+      {/* Spot stats */}
+      {spotCount > 0 && (
+        <div style={{
+          display: 'flex', gap: 8, marginBottom: 10,
+          background: '#0f172a', borderRadius: 6, padding: '8px 10px',
+        }}>
+          <div style={{ flex: 1, textAlign: 'center' }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#e2e8f0' }}>{spotCount}</div>
+            <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase' }}>Total</div>
+          </div>
+          <div style={{ flex: 1, textAlign: 'center' }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#34d399' }}>{filledCount || 0}</div>
+            <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase' }}>Filled</div>
+          </div>
+          <div style={{ flex: 1, textAlign: 'center' }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: vacantCount > 0 ? '#facc15' : '#64748b' }}>{vacantCount}</div>
+            <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase' }}>Vacant</div>
           </div>
         </div>
+      )}
+
+      {/* Draw Street section */}
+      <label style={{ fontSize: 11, color: '#94a3b8', display: 'block', marginBottom: 4 }}>
+        Draw a line for each row of vendor spots
+      </label>
+
+      <div style={{ marginBottom: 6 }}>
+        <label style={{ fontSize: 10, color: '#64748b', display: 'block', marginBottom: 2 }}>
+          Spot size (ft)
+        </label>
+        <input
+          type="number"
+          value={spotSizeFt}
+          onChange={(e) => setSpotSizeFt(Number(e.target.value) || 12)}
+          min={6}
+          max={20}
+          style={{ width: 80, padding: '3px 6px', fontSize: 12, boxSizing: 'border-box' }}
+        />
       </div>
 
       <button
         className="btn"
         disabled={loading}
-        onClick={() => onToggleStreetDraw({ spotSizeFt, rows: streetRows })}
+        onClick={() => onToggleStreetDraw({ spotSizeFt, rows: 1 })}
         style={{
           background: streetDrawMode ? '#dc2626' : '#facc15',
           color: streetDrawMode ? '#fff' : '#000',
@@ -79,7 +83,7 @@ export default function PlacementControls({
       {pathCount > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
           <span style={{ fontSize: 11, color: '#94a3b8' }}>
-            {pathCount} street{pathCount !== 1 ? 's' : ''} drawn
+            {pathCount} line{pathCount !== 1 ? 's' : ''} drawn
           </span>
           <button
             className="btn btn-secondary"
@@ -106,7 +110,7 @@ export default function PlacementControls({
       </select>
 
       <label style={{ fontSize: 11, color: '#94a3b8', display: 'block', marginBottom: 4 }}>
-        Rows per side (more rows = more spots)
+        Rows per side
       </label>
       <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
         {[1, 2, 3].map((n) => (
@@ -141,12 +145,6 @@ export default function PlacementControls({
           </button>
         )}
       </div>
-
-      {spotCount > 0 && (
-        <p style={{ fontSize: 11, color: '#94a3b8', marginBottom: 8, marginTop: -4 }}>
-          {spotCount} spots on map
-        </p>
-      )}
 
       {/* Placement */}
       <button

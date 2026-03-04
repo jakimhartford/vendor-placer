@@ -63,5 +63,9 @@ export default function usePlacements() {
     setPlacements(EMPTY_PLACEMENTS);
   }, []);
 
-  return { placements, loading, runPlacement, loadPlacements, clearPlacements };
+  const updateAssignments = useCallback((newAssignments) => {
+    setPlacements((prev) => ({ ...prev, assignments: newAssignments }));
+  }, []);
+
+  return { placements, loading, runPlacement, loadPlacements, clearPlacements, updateAssignments };
 }

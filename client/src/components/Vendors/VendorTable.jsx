@@ -1,37 +1,64 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { TIER_COLORS, EMPTY_COLOR } from '../../utils/tierColors.js';
 
 const COLUMNS = [
-  { key: 'name', label: 'Name' },
-  { key: 'category', label: 'Cat' },
-  { key: 'tier', label: 'Tier' },
-  { key: 'spot', label: 'Spot' },
+  { key: 'name', label: 'Name', width: '30%' },
+  { key: 'category', label: 'Type', width: '15%' },
+  { key: 'tier', label: 'Tier', width: '13%' },
+  { key: 'spot', label: 'Spot', width: '22%' },
+  { key: 'status', label: '', width: '20%' },
 ];
 
-export default function VendorTable({ vendors, assignments, spots, onSelectVendor }) {
+export default function VendorTable({ vendors, assignments, spots, onSelectVendor, onReassign }) {
   const [sortKey, setSortKey] = useState('name');
   const [sortDir, setSortDir] = useState(1);
   const [search, setSearch] = useState('');
+  const [editingVendorId, setEditingVendorId] = useState(null);
+  const [filterUnplaced, setFilterUnplaced] = useState(false);
 
-  // Build vendorId -> spotLabel map
+  // Build vendorId -> { spotId, spotLabel } map
   const vendorSpotMap = useMemo(() => {
     const map = {};
     if (assignments && spots?.features) {
       const spotMap = {};
       spots.features.forEach((f) => {
-        if (f.properties?.id) spotMap[f.properties.id] = f.properties.label || f.properties.id;
+        if (f.properties?.id) {
+          spotMap[f.properties.id] = {
+            label: f.properties.label || f.properties.id,
+            id: f.properties.id,
+          };
+        }
       });
-      // assignments is {spotId: vendorId}
       Object.entries(assignments).forEach(([spotId, vendorId]) => {
-        map[vendorId] = spotMap[spotId] || spotId;
+        map[vendorId] = spotMap[spotId] || { label: spotId, id: spotId };
       });
     }
     return map;
   }, [assignments, spots]);
 
+  // Available (unassigned) spots for reassignment
+  const availableSpots = useMemo(() => {
+    if (!spots?.features) return [];
+    const assignedSpotIds = new Set(Object.keys(assignments || {}));
+    return spots.features
+      .filter((f) => f.properties?.id && !assignedSpotIds.has(f.properties.id))
+      .map((f) => ({
+        id: f.properties.id,
+        label: f.properties.label || f.properties.id,
+        isCorner: f.properties.isCorner,
+        trafficScore: f.properties.trafficScore || 0,
+      }))
+      .sort((a, b) => b.trafficScore - a.trafficScore);
+  }, [spots, assignments]);
+
   const filtered = useMemo(() => {
     if (!vendors?.length) return [];
     let list = vendors;
+
+    if (filterUnplaced) {
+      list = list.filter((v) => !vendorSpotMap[v.id]);
+    }
+
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -39,14 +66,18 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
           v.name?.toLowerCase().includes(q) ||
           v.category?.toLowerCase().includes(q) ||
           v.tier?.toLowerCase().includes(q) ||
-          (vendorSpotMap[v.id] || '').toLowerCase().includes(q)
+          (vendorSpotMap[v.id]?.label || '').toLowerCase().includes(q)
       );
     }
+
     return [...list].sort((a, b) => {
       let aVal, bVal;
       if (sortKey === 'spot') {
-        aVal = (vendorSpotMap[a.id] || '').toLowerCase();
-        bVal = (vendorSpotMap[b.id] || '').toLowerCase();
+        aVal = (vendorSpotMap[a.id]?.label || '').toLowerCase();
+        bVal = (vendorSpotMap[b.id]?.label || '').toLowerCase();
+      } else if (sortKey === 'status') {
+        aVal = vendorSpotMap[a.id] ? '1' : '0';
+        bVal = vendorSpotMap[b.id] ? '1' : '0';
       } else {
         aVal = (a[sortKey] || '').toString().toLowerCase();
         bVal = (b[sortKey] || '').toString().toLowerCase();
@@ -55,7 +86,7 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
       if (aVal > bVal) return 1 * sortDir;
       return 0;
     });
-  }, [vendors, sortKey, sortDir, search, vendorSpotMap]);
+  }, [vendors, sortKey, sortDir, search, vendorSpotMap, filterUnplaced]);
 
   const handleSort = (key) => {
     if (key === sortKey) {
@@ -65,6 +96,18 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
       setSortDir(1);
     }
   };
+
+  const handleReassign = useCallback(
+    (vendorId, newSpotId) => {
+      setEditingVendorId(null);
+      if (onReassign && newSpotId) {
+        onReassign(vendorId, newSpotId);
+      }
+    },
+    [onReassign]
+  );
+
+  const unplacedCount = vendors?.filter((v) => !vendorSpotMap[v.id]).length || 0;
 
   if (!vendors?.length) {
     return <p style={{ color: '#64748b', fontSize: 12 }}>No vendors loaded.</p>;
@@ -85,18 +128,42 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
           borderRadius: 6,
           color: '#e2e8f0',
           fontSize: 12,
-          marginBottom: 8,
+          marginBottom: 6,
+          boxSizing: 'border-box',
         }}
       />
-      <p className="count-label">
-        {filtered.length} of {vendors.length} vendor{vendors.length !== 1 ? 's' : ''}
-      </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+        <span className="count-label" style={{ margin: 0 }}>
+          {filtered.length} of {vendors.length}
+        </span>
+        {unplacedCount > 0 && (
+          <button
+            onClick={() => setFilterUnplaced(!filterUnplaced)}
+            style={{
+              background: filterUnplaced ? '#dc2626' : '#334155',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 4,
+              padding: '2px 8px',
+              fontSize: 10,
+              cursor: 'pointer',
+              fontWeight: 600,
+            }}
+          >
+            {filterUnplaced ? 'Show all' : `${unplacedCount} unplaced`}
+          </button>
+        )}
+      </div>
       <div className="vendor-table-wrapper">
         <table className="vendor-table">
           <thead>
             <tr>
               {COLUMNS.map((col) => (
-                <th key={col.key} onClick={() => handleSort(col.key)}>
+                <th
+                  key={col.key}
+                  onClick={() => handleSort(col.key)}
+                  style={{ width: col.width }}
+                >
                   {col.label}
                   {sortKey === col.key ? (sortDir === 1 ? ' \u25B2' : ' \u25BC') : ''}
                 </th>
@@ -105,15 +172,39 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
           </thead>
           <tbody>
             {filtered.map((v, idx) => {
-              const spotLabel = vendorSpotMap[v.id] || '';
+              const spotInfo = vendorSpotMap[v.id];
+              const isPlaced = !!spotInfo;
+              const hasConflicts = v.conflicts?.length > 0;
+              const isPremium = v.premium;
+              const isEditing = editingVendorId === v.id;
+
               return (
                 <tr
                   key={v.id || v._id || idx}
-                  onClick={() => onSelectVendor?.(v.id)}
-                  style={{ cursor: onSelectVendor ? 'pointer' : 'default' }}
+                  onClick={() => !isEditing && onSelectVendor?.(v.id)}
+                  style={{
+                    cursor: onSelectVendor ? 'pointer' : 'default',
+                    background: !isPlaced ? 'rgba(220, 38, 38, 0.08)' : undefined,
+                  }}
                 >
-                  <td title={v.name}>{v.name}</td>
-                  <td>{v.category}</td>
+                  <td title={v.name}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {v.name}
+                      </span>
+                      {isPremium && (
+                        <span title="Premium spot purchased" style={{ fontSize: 9, color: '#facc15', flexShrink: 0 }}>
+                          ★
+                        </span>
+                      )}
+                    </div>
+                    {hasConflicts && (
+                      <div style={{ fontSize: 9, color: '#f87171', marginTop: 1 }}>
+                        conflicts: {v.conflicts.join(', ')}
+                      </div>
+                    )}
+                  </td>
+                  <td style={{ fontSize: 11, textTransform: 'capitalize' }}>{v.category}</td>
                   <td>
                     <span
                       className="tier-badge"
@@ -124,8 +215,70 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
                       {v.tier || '—'}
                     </span>
                   </td>
-                  <td style={{ color: spotLabel ? '#34d399' : '#475569', fontSize: 11 }}>
-                    {spotLabel || '—'}
+                  <td>
+                    {isEditing ? (
+                      <select
+                        autoFocus
+                        style={{
+                          width: '100%',
+                          fontSize: 10,
+                          padding: '2px 4px',
+                          background: '#1e293b',
+                          color: '#e2e8f0',
+                          border: '1px solid #facc15',
+                          borderRadius: 4,
+                        }}
+                        defaultValue=""
+                        onChange={(e) => handleReassign(v.id, e.target.value)}
+                        onBlur={() => setEditingVendorId(null)}
+                      >
+                        <option value="">-- pick spot --</option>
+                        {availableSpots.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.label} {s.isCorner ? '★' : ''} ({s.trafficScore})
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div
+                        style={{
+                          color: isPlaced ? '#34d399' : '#475569',
+                          fontSize: 11,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 4,
+                        }}
+                      >
+                        <span>{spotInfo?.label || '—'}</span>
+                        {onReassign && (
+                          <button
+                            title={isPlaced ? 'Reassign spot' : 'Assign spot'}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingVendorId(v.id);
+                            }}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#64748b',
+                              cursor: 'pointer',
+                              padding: '0 2px',
+                              fontSize: 12,
+                              lineHeight: 1,
+                            }}
+                          >
+                            ✎
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    {!isPlaced && (
+                      <span style={{ fontSize: 9, color: '#ef4444', fontWeight: 600 }}>
+                        UNPLACED
+                      </span>
+                    )}
                   </td>
                 </tr>
               );

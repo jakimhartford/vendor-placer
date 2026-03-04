@@ -33,6 +33,7 @@ export default function App() {
     loading: placementsLoading,
     runPlacement,
     clearPlacements,
+    updateAssignments,
   } = usePlacements();
 
   // Street path state
@@ -112,6 +113,20 @@ export default function App() {
     setSelectedVendorId((prev) => (prev === vendorId ? null : vendorId));
   }, []);
 
+  const handleReassign = useCallback((vendorId, newSpotId) => {
+    const current = { ...(placements.assignments || {}) };
+    // Remove vendor from current spot
+    for (const [spotId, vid] of Object.entries(current)) {
+      if (vid === vendorId) {
+        delete current[spotId];
+        break;
+      }
+    }
+    // Assign to new spot
+    current[newSpotId] = vendorId;
+    updateAssignments(current);
+  }, [placements, updateAssignments]);
+
   const loading = vendorsLoading || spotsLoading || placementsLoading;
 
   return (
@@ -138,6 +153,7 @@ export default function App() {
             onClearGrid={handleClearGrid}
             loading={loading}
             spotCount={spots?.features?.length || 0}
+            filledCount={Object.keys(placements.assignments || {}).length}
             streetDrawMode={streetDrawMode}
             onToggleStreetDraw={handleToggleStreetDraw}
             onClearPaths={handleClearPaths}
@@ -157,6 +173,7 @@ export default function App() {
             assignments={placements.assignments}
             spots={spots}
             onSelectVendor={handleSelectVendor}
+            onReassign={handleReassign}
           />
         </div>
       </aside>
@@ -167,12 +184,10 @@ export default function App() {
           spots={spots}
           vendors={vendors}
           assignments={placements.assignments}
-          onSpotsChange={handleSpotsChange}
           selectedSpotId={selectedSpotId}
           paths={paths}
           onPathDrawn={handlePathDrawn}
           streetDrawMode={streetDrawMode}
-          onStreetDrawModeChange={setStreetDrawMode}
         />
       </main>
     </div>

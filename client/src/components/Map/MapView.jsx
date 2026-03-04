@@ -5,7 +5,7 @@ import SpotLayer from './SpotLayer.jsx';
 import DrawToolbar from './DrawToolbar.jsx';
 import FitBounds from './FitBounds.jsx';
 
-export default function MapView({ spots, vendors, assignments, onSpotsChange, selectedSpotId, paths, onPathDrawn, streetDrawMode, onStreetDrawModeChange }) {
+export default function MapView({ spots, vendors, assignments, selectedSpotId, paths, onPathDrawn, streetDrawMode }) {
   return (
     <MapContainer
       center={MAP_CENTER}
@@ -29,11 +29,8 @@ export default function MapView({ spots, vendors, assignments, onSpotsChange, se
         paths={paths}
       />
       <DrawToolbar
-        spots={spots}
-        onSpotsChange={onSpotsChange}
         onPathDrawn={onPathDrawn}
         streetDrawMode={streetDrawMode}
-        onStreetDrawModeChange={onStreetDrawModeChange}
       />
     </MapContainer>
   );
