@@ -9,6 +9,7 @@ import { spotRoutes } from './routes/spots.js';
 import { placementRoutes } from './routes/placements.js';
 import { projectRoutes } from './routes/projects.js';
 import { deadZoneRoutes } from './routes/deadZones.js';
+import { shareRoutes } from './routes/share.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -19,6 +20,7 @@ app.use(express.json({ limit: '10mb' }));
 // Public routes
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api/auth', authRoutes);
+app.use('/api', shareRoutes);
 
 // Protected routes
 app.use('/api/vendors', requireAuth, vendorRoutes);

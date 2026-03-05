@@ -56,6 +56,9 @@ projectRoutes.get('/:id', async (req, res) => {
       deadZones: project.deadZones || [],
       mapCenter: project.mapCenter,
       zoom: project.zoom,
+      settings: project.settings,
+      versions: (project.versions || []).map((v) => ({ _id: v._id, name: v.name, createdAt: v.createdAt })),
+      activeVersionId: project.activeVersionId,
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -66,7 +69,7 @@ projectRoutes.get('/:id', async (req, res) => {
 projectRoutes.post('/', async (req, res) => {
   try {
     const userId = req.user.id;
-    const { name, mapCenter, zoom, paths } = req.body;
+    const { name, mapCenter, zoom, paths, settings } = req.body;
 
     const session = getSession(userId);
     const project = await Project.create({
@@ -79,6 +82,7 @@ projectRoutes.post('/', async (req, res) => {
       paths: paths || [],
       mapCenter: mapCenter || null,
       zoom: zoom || null,
+      settings: settings || undefined,
     });
 
     return res.json({
@@ -101,7 +105,7 @@ projectRoutes.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Project not found' });
     }
 
-    const { name, mapCenter, zoom, paths } = req.body;
+    const { name, mapCenter, zoom, paths, settings } = req.body;
 
     const session = getSession(userId);
     project.name = name || project.name;
@@ -112,6 +116,20 @@ projectRoutes.put('/:id', async (req, res) => {
     project.placements = getPlacements(userId);
     project.deadZones = session.deadZones;
     project.paths = paths ?? project.paths;
+    if (settings) project.settings = settings;
+
+    // If a version is active, update that version snapshot too
+    if (project.activeVersionId) {
+      const ver = project.versions.id(project.activeVersionId);
+      if (ver) {
+        ver.spotsGeoJSON = project.spotsGeoJSON;
+        ver.vendors = project.vendors;
+        ver.placements = project.placements;
+        ver.deadZones = project.deadZones;
+        ver.paths = project.paths;
+        if (settings) ver.settings = settings;
+      }
+    }
 
     await project.save();
 
@@ -119,6 +137,93 @@ projectRoutes.put('/:id', async (req, res) => {
       id: project._id,
       name: project.name,
       updatedAt: project.updatedAt,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/projects/:id/versions — snapshot current state as a new version
+projectRoutes.post('/:id/versions', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const project = await Project.findOne({ _id: req.params.id, owner: userId });
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    const session = getSession(userId);
+    const version = {
+      name: req.body.name || 'Untitled Version',
+      spotsGeoJSON: getSpots(userId),
+      vendors: getVendors(userId),
+      placements: getPlacements(userId),
+      deadZones: session.deadZones,
+      paths: project.paths,
+      settings: project.settings,
+    };
+
+    project.versions.push(version);
+    const saved = project.versions[project.versions.length - 1];
+    project.activeVersionId = saved._id;
+    await project.save();
+
+    return res.json({ _id: saved._id, name: saved.name, createdAt: saved.createdAt });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/projects/:id/versions — list version summaries
+projectRoutes.get('/:id/versions', async (req, res) => {
+  try {
+    const project = await Project.findOne({ _id: req.params.id, owner: req.user.id });
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    const summaries = (project.versions || []).map((v) => ({
+      _id: v._id,
+      name: v.name,
+      createdAt: v.createdAt,
+    }));
+    return res.json({ versions: summaries, activeVersionId: project.activeVersionId });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/projects/:id/versions/:versionId/load — restore a version
+projectRoutes.post('/:id/versions/:versionId/load', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const project = await Project.findOne({ _id: req.params.id, owner: userId });
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    const version = project.versions.id(req.params.versionId);
+    if (!version) return res.status(404).json({ error: 'Version not found' });
+
+    // Restore in-memory state from version
+    const session = getSession(userId);
+    if (version.spotsGeoJSON) setSpots(userId, version.spotsGeoJSON);
+    if (version.vendors) setVendors(userId, version.vendors);
+    if (version.placements) setPlacements(userId, version.placements);
+    session.deadZones = version.deadZones || [];
+
+    // Also update the project's top-level state
+    project.spotsGeoJSON = version.spotsGeoJSON;
+    project.vendors = version.vendors;
+    project.placements = version.placements;
+    project.deadZones = version.deadZones || [];
+    project.paths = version.paths || project.paths;
+    if (version.settings) project.settings = version.settings;
+    project.activeVersionId = version._id;
+    await project.save();
+
+    return res.json({
+      spotsGeoJSON: version.spotsGeoJSON,
+      vendors: version.vendors,
+      placements: version.placements,
+      deadZones: version.deadZones || [],
+      paths: version.paths || [],
+      settings: version.settings || project.settings,
+      activeVersionId: version._id,
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });

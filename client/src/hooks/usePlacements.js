@@ -10,10 +10,10 @@ export default function usePlacements() {
   const [placements, setPlacements] = useState(EMPTY_PLACEMENTS);
   const [loading, setLoading] = useState(false);
 
-  const runPlacement = useCallback(async () => {
+  const runPlacement = useCallback(async (settings) => {
     setLoading(true);
     try {
-      const data = await apiRunPlacement();
+      const data = await apiRunPlacement(settings);
       // Handle both array [{vendorId, spotId}] and object {spotId: vendorId} formats
       const raw = data.assignments || {};
       let assignmentsMap;

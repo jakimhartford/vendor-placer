@@ -30,7 +30,8 @@ placementRoutes.post('/run', (req, res) => {
       return res.status(400).json({ error: 'No spots available. Generate a grid first.' });
     }
 
-    const result = runPlacement(vendors, spots);
+    const { noSameAdjacentCategories } = req.body || {};
+    const result = runPlacement(vendors, spots, { noSameAdjacentCategories });
     const lastResult = {
       ...result,
       timestamp: new Date().toISOString(),

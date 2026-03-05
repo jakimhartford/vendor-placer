@@ -5,12 +5,17 @@ import {
   createProject as apiCreateProject,
   updateProject as apiUpdateProject,
   deleteProject as apiDeleteProject,
+  fetchVersions as apiFetchVersions,
+  createVersion as apiCreateVersion,
+  loadVersion as apiLoadVersion,
 } from '../api/index.js';
 
 export default function useProjects() {
   const [projects, setProjects] = useState([]);
   const [currentProjectId, setCurrentProjectId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [versions, setVersions] = useState([]);
+  const [activeVersionId, setActiveVersionId] = useState(null);
 
   const loadProjects = useCallback(async () => {
     setLoading(true);
@@ -29,6 +34,8 @@ export default function useProjects() {
     try {
       const data = await apiFetchProject(id);
       setCurrentProjectId(id);
+      setVersions(data.versions || []);
+      setActiveVersionId(data.activeVersionId || null);
       return data;
     } finally {
       setLoading(false);
@@ -69,6 +76,41 @@ export default function useProjects() {
     }
   }, [currentProjectId, loadProjects]);
 
+  const loadVersions = useCallback(async (projectId) => {
+    try {
+      const data = await apiFetchVersions(projectId || currentProjectId);
+      setVersions(data.versions || []);
+      setActiveVersionId(data.activeVersionId || null);
+    } catch {
+      setVersions([]);
+    }
+  }, [currentProjectId]);
+
+  const saveVersion = useCallback(async (name) => {
+    if (!currentProjectId) return;
+    setLoading(true);
+    try {
+      const ver = await apiCreateVersion(currentProjectId, name);
+      setVersions((prev) => [...prev, ver]);
+      setActiveVersionId(ver._id);
+      return ver;
+    } finally {
+      setLoading(false);
+    }
+  }, [currentProjectId]);
+
+  const loadVersionData = useCallback(async (versionId) => {
+    if (!currentProjectId) return;
+    setLoading(true);
+    try {
+      const data = await apiLoadVersion(currentProjectId, versionId);
+      setActiveVersionId(data.activeVersionId || versionId);
+      return data;
+    } finally {
+      setLoading(false);
+    }
+  }, [currentProjectId]);
+
   return {
     projects,
     currentProjectId,
@@ -79,5 +121,10 @@ export default function useProjects() {
     saveProject,
     removeProject,
     setCurrentProjectId,
+    versions,
+    activeVersionId,
+    loadVersions,
+    saveVersion,
+    loadVersionData,
   };
 }

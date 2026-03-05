@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { TIER_COLORS, EMPTY_COLOR } from '../../utils/tierColors.js';
+import { generateShareLink } from '../../api/index.js';
 
 const COLUMNS = [
   { key: 'name', label: 'Name', width: '30%' },
@@ -9,12 +10,13 @@ const COLUMNS = [
   { key: 'status', label: '', width: '20%' },
 ];
 
-export default function VendorTable({ vendors, assignments, spots, onSelectVendor, onReassign }) {
+export default function VendorTable({ vendors, assignments, spots, onSelectVendor, onReassign, currentProjectId }) {
   const [sortKey, setSortKey] = useState('name');
   const [sortDir, setSortDir] = useState(1);
   const [search, setSearch] = useState('');
   const [editingVendorId, setEditingVendorId] = useState(null);
   const [filterUnplaced, setFilterUnplaced] = useState(false);
+  const [copiedVendorId, setCopiedVendorId] = useState(null);
 
   // Build vendorId -> { spotId, spotLabel, allSpots } map
   const vendorSpotMap = useMemo(() => {
@@ -113,6 +115,20 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
     },
     [onReassign]
   );
+
+  const handleShare = useCallback(async (e, vendorId) => {
+    e.stopPropagation();
+    if (!currentProjectId) return;
+    try {
+      const { url } = await generateShareLink(currentProjectId, vendorId);
+      const fullUrl = `${window.location.origin}${url}`;
+      await navigator.clipboard.writeText(fullUrl);
+      setCopiedVendorId(vendorId);
+      setTimeout(() => setCopiedVendorId(null), 2000);
+    } catch {
+      // ignore
+    }
+  }, [currentProjectId]);
 
   const unplacedCount = vendors?.filter((v) => !vendorSpotMap[v.id]).length || 0;
 
@@ -305,10 +321,26 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
                     )}
                   </td>
                   <td>
-                    {!isPlaced && (
+                    {!isPlaced ? (
                       <span style={{ fontSize: 9, color: '#ef4444', fontWeight: 600 }}>
                         UNPLACED
                       </span>
+                    ) : currentProjectId && (
+                      <button
+                        title="Copy share link"
+                        onClick={(e) => handleShare(e, v.id)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: 12,
+                          color: copiedVendorId === v.id ? '#34d399' : '#64748b',
+                          padding: '0 2px',
+                          lineHeight: 1,
+                        }}
+                      >
+                        {copiedVendorId === v.id ? 'Copied!' : '🔗'}
+                      </button>
                     )}
                   </td>
                 </tr>

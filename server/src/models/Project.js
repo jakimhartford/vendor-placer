@@ -1,5 +1,18 @@
 import mongoose from 'mongoose';
 
+const versionSchema = new mongoose.Schema({
+  name: { type: String, default: 'Untitled Version' },
+  spotsGeoJSON: Object,
+  vendors: [Object],
+  placements: Object,
+  deadZones: mongoose.Schema.Types.Mixed,
+  paths: mongoose.Schema.Types.Mixed,
+  settings: {
+    noSameAdjacentCategories: { type: [String], default: ['art', 'craft', 'jewelry', 'clothing'] },
+  },
+  createdAt: { type: Date, default: Date.now },
+}, { _id: true });
+
 const projectSchema = new mongoose.Schema({
   owner: {
     type: mongoose.Schema.Types.ObjectId,
@@ -39,6 +52,14 @@ const projectSchema = new mongoose.Schema({
   zoom: {
     type: Number,
     default: null,
+  },
+  versions: [versionSchema],
+  activeVersionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: null,
+  },
+  settings: {
+    noSameAdjacentCategories: { type: [String], default: ['art', 'craft', 'jewelry', 'clothing'] },
   },
 }, {
   timestamps: true,

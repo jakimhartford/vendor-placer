@@ -4,6 +4,7 @@ import useSpots from './hooks/useSpots.js';
 import usePlacements from './hooks/usePlacements.js';
 import useProjects from './hooks/useProjects.js';
 import useDeadZones from './hooks/useDeadZones.js';
+import useUndoRedo from './hooks/useUndoRedo.js';
 import MapView from './components/Map/MapView.jsx';
 import CsvUploader from './components/Vendors/CsvUploader.jsx';
 import VendorTable from './components/Vendors/VendorTable.jsx';
@@ -12,6 +13,7 @@ import PlacementStats from './components/Placement/PlacementStats.jsx';
 import ProjectBar from './components/Projects/ProjectBar.jsx';
 import SpotTable from './components/Spots/SpotTable.jsx';
 import WalkthroughTutorial, { STORAGE_KEY as TUTORIAL_KEY } from './components/Tutorial/WalkthroughTutorial.jsx';
+import { saveSpots as apiSaveSpots } from './api/index.js';
 import { useAuth } from './contexts/AuthContext.jsx';
 
 export default function App() {
@@ -56,6 +58,10 @@ export default function App() {
     saveNewProject,
     saveProject,
     removeProject,
+    versions,
+    activeVersionId,
+    saveVersion,
+    loadVersionData,
   } = useProjects();
 
   const {
@@ -66,6 +72,59 @@ export default function App() {
     clearAll: clearDeadZones,
     setDeadZones,
   } = useDeadZones();
+
+  const {
+    pushState,
+    undo: undoState,
+    redo: redoState,
+    markUndone,
+    markRedone,
+    canUndo,
+    canRedo,
+  } = useUndoRedo();
+
+  const captureSnapshot = useCallback(() => ({
+    spots: spots ? JSON.parse(JSON.stringify(spots)) : null,
+    assignments: placements.assignments ? { ...placements.assignments } : {},
+    deadZones: deadZones ? JSON.parse(JSON.stringify(deadZones)) : [],
+    paths: JSON.parse(JSON.stringify(paths)),
+  }), [spots, placements.assignments, deadZones, paths]);
+
+  const restoreSnapshot = useCallback((snapshot) => {
+    if (snapshot.spots) {
+      setSpotsLocal(snapshot.spots);
+      apiSaveSpots(snapshot.spots).catch(() => {});
+    }
+    if (snapshot.assignments) updateAssignments(snapshot.assignments);
+    if (snapshot.deadZones) setDeadZones(snapshot.deadZones);
+    if (snapshot.paths) {
+      setPaths(snapshot.paths);
+      setPathLabelIdx(snapshot.paths.length);
+    }
+  }, [setSpotsLocal, updateAssignments, setDeadZones]);
+
+  const handleUndo = useCallback(() => {
+    const current = captureSnapshot();
+    const prev = undoState();
+    if (prev) {
+      markUndone(current);
+      restoreSnapshot(prev);
+    }
+  }, [captureSnapshot, undoState, markUndone, restoreSnapshot]);
+
+  const handleRedo = useCallback(() => {
+    const current = captureSnapshot();
+    const next = redoState();
+    if (next) {
+      markRedone(current);
+      restoreSnapshot(next);
+    }
+  }, [captureSnapshot, redoState, markRedone, restoreSnapshot]);
+
+  // Project settings
+  const [projectSettings, setProjectSettings] = useState({
+    noSameAdjacentCategories: ['art', 'craft', 'jewelry', 'clothing'],
+  });
 
   // Street path state
   const [paths, setPaths] = useState([]);
@@ -103,13 +162,12 @@ export default function App() {
   const handleLoadProject = useCallback(async (id) => {
     const data = await loadProject(id);
     if (data) {
-      // Refresh all in-memory state from server (which was restored by the GET)
       await loadVendors();
       await loadSpots();
       await loadDeadZones();
-      // Restore client-only state
       setPaths(data.paths || []);
       setPathLabelIdx(data.paths?.length || 0);
+      if (data.settings) setProjectSettings(data.settings);
       if (data.placements) {
         const raw = data.placements.assignments || {};
         updateAssignments(Array.isArray(raw) ? Object.fromEntries(raw.map((a) => [a.spotId, a.vendorId])) : raw);
@@ -129,6 +187,26 @@ export default function App() {
     await removeProject(id);
   }, [removeProject]);
 
+  const handleSaveVersion = useCallback(async (name) => {
+    await saveVersion(name);
+  }, [saveVersion]);
+
+  const handleLoadVersion = useCallback(async (versionId) => {
+    const data = await loadVersionData(versionId);
+    if (data) {
+      await loadVendors();
+      await loadSpots();
+      await loadDeadZones();
+      setPaths(data.paths || []);
+      setPathLabelIdx(data.paths?.length || 0);
+      if (data.settings) setProjectSettings(data.settings);
+      if (data.placements) {
+        const raw = data.placements.assignments || {};
+        updateAssignments(Array.isArray(raw) ? Object.fromEntries(raw.map((a) => [a.spotId, a.vendorId])) : raw);
+      }
+    }
+  }, [loadVersionData, loadVendors, loadSpots, loadDeadZones, updateAssignments]);
+
   const handleClearVendors = async () => {
     await clearVendors();
     clearPlacements();
@@ -145,6 +223,7 @@ export default function App() {
 
   const handlePathDrawn = useCallback(
     async (coords) => {
+      pushState(captureSnapshot());
       setPaths((prev) => [...prev, coords]);
       setStreetDrawMode(false);
 
@@ -167,8 +246,9 @@ export default function App() {
   };
 
   const handleSpotPlaced = useCallback(async ({ lat, lng }) => {
+    pushState(captureSnapshot());
     await addSingleSpot({ lat, lng });
-  }, [addSingleSpot]);
+  }, [addSingleSpot, pushState, captureSnapshot]);
 
   const handleToggleSpotPlace = () => {
     if (spotPlaceMode) {
@@ -191,18 +271,19 @@ export default function App() {
   };
 
   const handleAddDeadZone = useCallback(async (polygon) => {
+    pushState(captureSnapshot());
     const result = await addDeadZone(polygon);
     if (result?.spotsGeoJSON) {
-      // Update spots since overlapping ones were removed
       setSpotsLocal(result.spotsGeoJSON);
     }
-  }, [addDeadZone, setSpotsLocal]);
+  }, [addDeadZone, setSpotsLocal, pushState, captureSnapshot]);
 
   const handleDeadZoneDrawDone = useCallback(() => {
     setDeadZoneDrawMode(false);
   }, []);
 
   const handleClearGrid = async () => {
+    pushState(captureSnapshot());
     await clearSpots();
     setPaths([]);
     setPathLabelIdx(0);
@@ -229,6 +310,7 @@ export default function App() {
     : null;
 
   const handleReassign = useCallback((vendorId, newSpotId) => {
+    pushState(captureSnapshot());
     const current = { ...(placements.assignments || {}) };
     for (const [spotId, vid] of Object.entries(current)) {
       if (vid === vendorId) {
@@ -238,7 +320,7 @@ export default function App() {
     }
     current[newSpotId] = vendorId;
     updateAssignments(current);
-  }, [placements, updateAssignments]);
+  }, [placements, updateAssignments, pushState, captureSnapshot]);
 
   const handleSpotClick = useCallback((feature, event) => {
     const spotId = feature.properties?.id;
@@ -268,14 +350,16 @@ export default function App() {
   }, [movingVendor, placements, handleReassign]);
 
   const handleSpotSave = useCallback(async (id, props) => {
+    pushState(captureSnapshot());
     await updateSpot(id, props);
     setEditingSpotId(null);
-  }, [updateSpot]);
+  }, [updateSpot, pushState, captureSnapshot]);
 
   const handleSpotDelete = useCallback(async (id) => {
+    pushState(captureSnapshot());
     await deleteSpot(id);
     setEditingSpotId(null);
-  }, [deleteSpot]);
+  }, [deleteSpot, pushState, captureSnapshot]);
 
   const handleSpotEditClose = useCallback(() => {
     setEditingSpotId(null);
@@ -295,11 +379,12 @@ export default function App() {
 
   const handleDeleteSelected = useCallback(async () => {
     if (selectedSpotIds.size === 0) return;
+    pushState(captureSnapshot());
     await deleteSpotsBatch([...selectedSpotIds]);
     setSelectedSpotIds(new Set());
-  }, [selectedSpotIds, deleteSpotsBatch]);
+  }, [selectedSpotIds, deleteSpotsBatch, pushState, captureSnapshot]);
 
-  // Escape key: cancel move mode and multi-select
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
@@ -307,10 +392,20 @@ export default function App() {
         setSelectedSpotIds(new Set());
         setDeadZoneDrawMode(false);
       }
+      // Undo: Cmd/Ctrl+Z (without Shift)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      }
+      // Redo: Cmd/Ctrl+Shift+Z or Cmd/Ctrl+Y
+      if ((e.metaKey || e.ctrlKey) && ((e.key === 'z' && e.shiftKey) || e.key === 'y')) {
+        e.preventDefault();
+        handleRedo();
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [handleUndo, handleRedo]);
 
   const loading = vendorsLoading || spotsLoading || placementsLoading || projectsLoading;
 
@@ -356,6 +451,10 @@ export default function App() {
             onSaveNew={handleSaveNewProject}
             onSave={handleSaveProject}
             onDelete={handleDeleteProject}
+            versions={versions}
+            activeVersionId={activeVersionId}
+            onLoadVersion={handleLoadVersion}
+            onSaveVersion={handleSaveVersion}
           />
         </div>
 
@@ -368,7 +467,7 @@ export default function App() {
         <div className="sidebar-section">
           <h3>Actions</h3>
           <PlacementControls
-            onRunPlacement={runPlacement}
+            onRunPlacement={(settings) => { pushState(captureSnapshot()); runPlacement(settings); }}
             onClearVendors={handleClearVendors}
             onClearGrid={handleClearGrid}
             loading={loading}
@@ -388,6 +487,12 @@ export default function App() {
             onClearDeadZones={clearDeadZones}
             selectedSpotIds={selectedSpotIds}
             onDeleteSelected={handleDeleteSelected}
+            projectSettings={projectSettings}
+            onSettingsChange={setProjectSettings}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
           />
         </div>
 
@@ -414,6 +519,7 @@ export default function App() {
             spots={spots}
             onSelectVendor={handleSelectVendor}
             onReassign={handleReassign}
+            currentProjectId={currentProjectId}
           />
         </div>
       </aside>

@@ -2,8 +2,8 @@ import { buildAdjacencyMap } from '../utils/adjacency.js';
 
 const TIER_PRIORITY = { platinum: 4, gold: 3, silver: 2, bronze: 1 };
 
-// Categories where same-category neighbours are forbidden
-const NO_SAME_CATEGORY_NEIGHBOR = new Set(['art', 'craft', 'jewelry', 'clothing']);
+// Default categories where same-category neighbours are forbidden
+const DEFAULT_NO_SAME_CATEGORY = ['art', 'craft', 'jewelry', 'clothing'];
 
 /**
  * Build a name->vendor lookup for conflict resolution by name.
@@ -26,7 +26,7 @@ function buildNameMap(vendors) {
  * @param {Map}    nameMap        - vendorName (lowercase) -> vendor
  * @returns {{ allowed: boolean, reason?: string }}
  */
-function canPlace(vendor, spot, adjacencyMap, assignmentMap, nameMap) {
+function canPlace(vendor, spot, adjacencyMap, assignmentMap, nameMap, noSameCategorySet) {
   // Dead zones are never available for placement
   if (spot.deadZone) {
     return { allowed: false, reason: `Spot "${spot.label}" is a dead zone` };
@@ -111,9 +111,9 @@ function canPlace(vendor, spot, adjacencyMap, assignmentMap, nameMap) {
       }
     }
 
-    // Same-category restriction (except food)
+    // Same-category restriction
     if (
-      NO_SAME_CATEGORY_NEIGHBOR.has(vendor.category) &&
+      noSameCategorySet.has(vendor.category) &&
       neighborVendor.category === vendor.category
     ) {
       return { allowed: false, reason: `Same category "${vendor.category}" adjacent: ${vendor.name} & ${neighborVendor.name}` };
@@ -135,7 +135,7 @@ function canPlace(vendor, spot, adjacencyMap, assignmentMap, nameMap) {
  * @param {object}   spotsGeoJSON    - GeoJSON FeatureCollection
  * @returns {{ assignments: object, unplaced: string[], conflicts: string[] }}
  */
-export function runPlacement(vendors, spotsGeoJSON) {
+export function runPlacement(vendors, spotsGeoJSON, options = {}) {
   if (!vendors.length || !spotsGeoJSON.features.length) {
     return {
       assignments: {},
@@ -143,6 +143,10 @@ export function runPlacement(vendors, spotsGeoJSON) {
       conflicts: [],
     };
   }
+
+  const noSameCategorySet = new Set(
+    options.noSameAdjacentCategories ?? DEFAULT_NO_SAME_CATEGORY
+  );
 
   const adjacencyMap = buildAdjacencyMap(spotsGeoJSON);
   const nameMap = buildNameMap(vendors);
@@ -170,7 +174,7 @@ export function runPlacement(vendors, spotsGeoJSON) {
     const boothsNeeded = vendor.booths || 1;
     for (const spot of spotList) {
       if (usedSpotIds.has(spot.id)) continue;
-      const result = canPlace(vendor, spot, adjacencyMap, assignmentMap, nameMap);
+      const result = canPlace(vendor, spot, adjacencyMap, assignmentMap, nameMap, noSameCategorySet);
       if (result.allowed) {
         // Assign primary spot
         assignments[spot.id] = vendor.id;
@@ -188,7 +192,7 @@ export function runPlacement(vendors, spotsGeoJSON) {
             // Find the neighbor spot properties
             const nSpot = spotProps.find((s) => s.id === nId);
             if (!nSpot) continue;
-            const nResult = canPlace(vendor, nSpot, adjacencyMap, assignmentMap, nameMap);
+            const nResult = canPlace(vendor, nSpot, adjacencyMap, assignmentMap, nameMap, noSameCategorySet);
             if (nResult.allowed) {
               assignments[nId] = vendor.id;
               usedSpotIds.add(nId);
@@ -236,7 +240,7 @@ export function runPlacement(vendors, spotsGeoJSON) {
       // Check why they couldn't be placed
       for (const spot of scoredSpots) {
         if (usedSpotIds.has(spot.id)) continue;
-        const result = canPlace(vendor, spot, adjacencyMap, assignmentMap, nameMap);
+        const result = canPlace(vendor, spot, adjacencyMap, assignmentMap, nameMap, noSameCategorySet);
         if (!result.allowed) {
           conflicts.push(result.reason);
           break;

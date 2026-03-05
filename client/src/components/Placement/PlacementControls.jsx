@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
 
+const ALL_CATEGORIES = ['food', 'art', 'craft', 'jewelry', 'clothing', 'services', 'other'];
+
 export default function PlacementControls({
   onRunPlacement,
   onClearVendors,
@@ -21,10 +23,26 @@ export default function PlacementControls({
   onClearDeadZones,
   selectedSpotIds,
   onDeleteSelected,
+  projectSettings,
+  onSettingsChange,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
 }) {
   const [spotSizeFt, setSpotSizeFt] = useState(12);
   const [spacingFt, setSpacingFt] = useState(4);
+  const [showRules, setShowRules] = useState(false);
   const vacantCount = spotCount - (filledCount || 0);
+
+  const noSameAdj = projectSettings?.noSameAdjacentCategories || [];
+
+  const toggleCategory = (cat) => {
+    const next = noSameAdj.includes(cat)
+      ? noSameAdj.filter((c) => c !== cat)
+      : [...noSameAdj, cat];
+    onSettingsChange?.({ ...projectSettings, noSameAdjacentCategories: next });
+  };
 
   // Total booths needed by all vendors
   const totalBoothsNeeded = useMemo(() => {
@@ -35,8 +53,34 @@ export default function PlacementControls({
   const spotsShortage = totalBoothsNeeded > 0 && spotCount > 0 && totalBoothsNeeded > spotCount;
   const unplacedCount = placements?.unplaced?.length || 0;
 
+  const handleRunPlacement = () => {
+    onRunPlacement({ noSameAdjacentCategories: noSameAdj });
+  };
+
   return (
     <div>
+      {/* Undo/Redo */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+        <button
+          className="btn btn-secondary"
+          disabled={!canUndo}
+          onClick={onUndo}
+          title="Undo (Ctrl+Z)"
+          style={{ flex: 1, fontSize: 11, padding: '4px 8px', marginBottom: 0 }}
+        >
+          Undo
+        </button>
+        <button
+          className="btn btn-secondary"
+          disabled={!canRedo}
+          onClick={onRedo}
+          title="Redo (Ctrl+Shift+Z)"
+          style={{ flex: 1, fontSize: 11, padding: '4px 8px', marginBottom: 0 }}
+        >
+          Redo
+        </button>
+      </div>
+
       {/* Spot stats */}
       {spotCount > 0 && (
         <div style={{
@@ -200,6 +244,54 @@ export default function PlacementControls({
 
       <hr style={{ border: 'none', borderTop: '1px solid #334155', margin: '10px 0' }} />
 
+      {/* Adjacency Rules */}
+      <div style={{ marginBottom: 8 }}>
+        <button
+          onClick={() => setShowRules(!showRules)}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#94a3b8',
+            cursor: 'pointer',
+            fontSize: 11,
+            padding: 0,
+            fontWeight: 600,
+          }}
+        >
+          {showRules ? '▾' : '▸'} Adjacency Rules
+        </button>
+        {showRules && (
+          <div style={{ marginTop: 6, paddingLeft: 4 }}>
+            <p style={{ fontSize: 10, color: '#64748b', margin: '0 0 6px' }}>
+              Checked categories can't be placed next to same type:
+            </p>
+            {ALL_CATEGORIES.map((cat) => (
+              <label
+                key={cat}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  fontSize: 11,
+                  color: '#e2e8f0',
+                  marginBottom: 3,
+                  cursor: 'pointer',
+                  textTransform: 'capitalize',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={noSameAdj.includes(cat)}
+                  onChange={() => toggleCategory(cat)}
+                  style={{ accentColor: '#3b82f6' }}
+                />
+                {cat}
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Warnings */}
       {spotsShortage && (
         <div style={{
@@ -233,7 +325,7 @@ export default function PlacementControls({
       <button
         className="btn btn-primary"
         disabled={loading}
-        onClick={onRunPlacement}
+        onClick={handleRunPlacement}
         data-tour="run-placement"
       >
         {loading ? 'Running...' : 'Run Placement'}

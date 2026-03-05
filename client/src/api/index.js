@@ -107,8 +107,8 @@ export function updateSpotsBatch(ids, updates) {
 
 // ---------- Placements ----------
 
-export function runPlacement() {
-  return api.post('/api/placements/run').then((res) => res.data);
+export function runPlacement(settings) {
+  return api.post('/api/placements/run', settings || {}).then((res) => res.data);
 }
 
 export function fetchPlacements() {
@@ -135,6 +135,30 @@ export function updateProject(id, data) {
 
 export function deleteProject(id) {
   return api.delete(`/api/projects/${id}`).then((res) => res.data);
+}
+
+// ---------- Versions ----------
+
+export function fetchVersions(projectId) {
+  return api.get(`/api/projects/${projectId}/versions`).then((res) => res.data);
+}
+
+export function createVersion(projectId, name) {
+  return api.post(`/api/projects/${projectId}/versions`, { name }).then((res) => res.data);
+}
+
+export function loadVersion(projectId, versionId) {
+  return api.post(`/api/projects/${projectId}/versions/${versionId}/load`).then((res) => res.data);
+}
+
+// ---------- Share Links ----------
+
+export function generateShareLink(projectId, vendorId) {
+  return api.post(`/api/projects/${projectId}/share-link`, { vendorId }).then((res) => res.data);
+}
+
+export function fetchShareData(token) {
+  return axios.get(`${api.defaults.baseURL || ''}/api/share/${token}`).then((res) => res.data);
 }
 
 // ---------- Dead Zones ----------
