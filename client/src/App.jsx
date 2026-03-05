@@ -102,6 +102,10 @@ export default function App() {
     setTimeWindows,
   } = useLogistics();
 
+  // Street path state (must be before captureSnapshot which references paths)
+  const [paths, setPaths] = useState([]);
+  const [pathLabelIdx, setPathLabelIdx] = useState(0);
+
   const {
     pushState,
     undo: undoState,
@@ -160,8 +164,6 @@ export default function App() {
   // Pricing config
   const [pricingConfig, setPricingConfig] = useState(null);
 
-  // Street path state
-  const [paths, setPaths] = useState([]);
   const [streetDrawMode, setStreetDrawMode] = useState(false);
   const [streetParams, setStreetParams] = useState({ spotSizeFt: 12, spacingFt: 4 });
 
@@ -184,8 +186,6 @@ export default function App() {
 
   // Multi-select state
   const [selectedSpotIds, setSelectedSpotIds] = useState(new Set());
-
-  const [pathLabelIdx, setPathLabelIdx] = useState(0);
 
   // Tutorial state
   const [tutorialActive, setTutorialActive] = useState(
