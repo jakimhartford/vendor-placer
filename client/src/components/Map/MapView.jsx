@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Polygon, Popup, useMap } from 'react-leaflet';
 import { MAP_CENTER, DEFAULT_ZOOM, GOOGLE_TILE_STYLES } from '../../utils/constants.js';
 import SpotLayer, { featureCenter } from './SpotLayer.jsx';
