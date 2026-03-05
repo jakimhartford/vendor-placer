@@ -645,7 +645,7 @@ export default function App() {
 
       <main className="map-area">
         <MapView
-          ref={mapRef}
+          mapContainerRef={mapRef}
           spots={spots}
           vendors={vendors}
           assignments={placements.assignments}

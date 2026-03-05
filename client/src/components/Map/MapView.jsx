@@ -1,4 +1,4 @@
-import React, { useState, forwardRef } from 'react';
+import React, { useState } from 'react';
 import { MapContainer, TileLayer, Polygon, Popup } from 'react-leaflet';
 import { MAP_CENTER, DEFAULT_ZOOM, GOOGLE_TILE_STYLES } from '../../utils/constants.js';
 import SpotLayer, { featureCenter } from './SpotLayer.jsx';
@@ -13,7 +13,7 @@ import AmenityLayer from './AmenityLayer.jsx';
 import AmenityPlacer from './AmenityPlacer.jsx';
 import AccessPointLayer from './AccessPointLayer.jsx';
 
-const MapView = forwardRef(function MapView({
+export default function MapView({
   spots, vendors, assignments, selectedSpotId, paths,
   onPathDrawn, streetDrawMode, spotPlaceMode, onSpotPlaced,
   onSpotClick, editingSpot, onSpotSave, onSpotDelete, onSpotEditClose,
@@ -21,7 +21,8 @@ const MapView = forwardRef(function MapView({
   onRemoveDeadZone, onStartMove, onUpdateDeadZone, currentProjectId, pricingConfig,
   amenities, amenityPlaceMode, amenityType, onPlaceAmenity, onDeleteAmenity, amenitiesVisible,
   accessPoints, accessPointPlaceMode, onPlaceAccessPoint, onDeleteAccessPoint,
-}, ref) {
+  mapContainerRef,
+}) {
   const [mapStyle, setMapStyle] = useState('streets');
   const [editingDeadZone, setEditingDeadZone] = useState(null);
 
@@ -33,7 +34,7 @@ const MapView = forwardRef(function MapView({
   const tileConfig = GOOGLE_TILE_STYLES[mapStyle];
 
   return (
-    <div ref={ref} style={{ width: '100%', height: '100%' }}>
+    <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }}>
     <MapContainer
       center={MAP_CENTER}
       zoom={DEFAULT_ZOOM}
@@ -172,6 +173,4 @@ const MapView = forwardRef(function MapView({
     </MapContainer>
     </div>
   );
-});
-
-export default MapView;
+}
