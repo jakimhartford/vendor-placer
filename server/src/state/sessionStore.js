@@ -8,6 +8,9 @@ export function getSession(userId) {
       spotsGeoJSON: { type: 'FeatureCollection', features: [], metadata: {} },
       lastPlacement: null,
       deadZones: [], // array of { id, polygon: [[lat, lng], ...] }
+      amenities: [], // array of { id, type, lat, lng, notes }
+      accessPoints: [], // array of { id, lat, lng, label, notes }
+      timeWindows: [], // array of { id, area, start, end }
     });
   }
   return sessions.get(userId);

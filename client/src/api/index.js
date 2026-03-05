@@ -55,6 +55,10 @@ export function clearVendors() {
   return api.delete('/api/vendors').then((res) => res.data);
 }
 
+export function updateVendor(id, updates) {
+  return api.patch(`/api/vendors/${id}`, updates).then((res) => res.data);
+}
+
 export function fetchSampleList() {
   return api.get('/api/vendors/samples').then((res) => res.data);
 }
@@ -175,8 +179,70 @@ export function deleteDeadZone(id) {
   return api.delete(`/api/dead-zones/${id}`).then((res) => res.data);
 }
 
+export function updateDeadZone(id, data) {
+  return api.patch(`/api/dead-zones/${id}`, data).then((res) => res.data);
+}
+
 export function clearDeadZones() {
   return api.delete('/api/dead-zones').then((res) => res.data);
+}
+
+// ---------- Amenities ----------
+
+export function fetchAmenities() {
+  return api.get('/api/amenities').then((res) => res.data);
+}
+
+export function createAmenity(data) {
+  return api.post('/api/amenities', data).then((res) => res.data);
+}
+
+export function updateAmenity(id, data) {
+  return api.patch(`/api/amenities/${id}`, data).then((res) => res.data);
+}
+
+export function deleteAmenity(id) {
+  return api.delete(`/api/amenities/${id}`).then((res) => res.data);
+}
+
+export function clearAmenities() {
+  return api.delete('/api/amenities').then((res) => res.data);
+}
+
+// ---------- Logistics ----------
+
+export function fetchLogistics() {
+  return api.get('/api/logistics').then((res) => res.data);
+}
+
+export function createAccessPoint(data) {
+  return api.post('/api/logistics/access-points', data).then((res) => res.data);
+}
+
+export function deleteAccessPoint(id) {
+  return api.delete(`/api/logistics/access-points/${id}`).then((res) => res.data);
+}
+
+export function createTimeWindow(data) {
+  return api.post('/api/logistics/time-windows', data).then((res) => res.data);
+}
+
+export function deleteTimeWindow(id) {
+  return api.delete(`/api/logistics/time-windows/${id}`).then((res) => res.data);
+}
+
+// ---------- Check-In ----------
+
+export function fetchCheckInData(projectId) {
+  return api.get(`/api/projects/${projectId}/checkin`).then((res) => res.data);
+}
+
+export function updateCheckIn(projectId, vendorId, data) {
+  return api.patch(`/api/projects/${projectId}/checkin/${vendorId}`, data).then((res) => res.data);
+}
+
+export function fetchCheckInSummary(projectId) {
+  return api.get(`/api/projects/${projectId}/checkin/summary`).then((res) => res.data);
 }
 
 export default api;

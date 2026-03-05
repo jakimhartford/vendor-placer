@@ -9,7 +9,11 @@ const versionSchema = new mongoose.Schema({
   paths: mongoose.Schema.Types.Mixed,
   settings: {
     noSameAdjacentCategories: { type: [String], default: ['art', 'craft', 'jewelry', 'clothing'] },
+    pricingConfig: { type: Object, default: null },
   },
+  amenities: [Object],
+  accessPoints: [Object],
+  timeWindows: [Object],
   createdAt: { type: Date, default: Date.now },
 }, { _id: true });
 
@@ -60,6 +64,24 @@ const projectSchema = new mongoose.Schema({
   },
   settings: {
     noSameAdjacentCategories: { type: [String], default: ['art', 'craft', 'jewelry', 'clothing'] },
+    pricingConfig: { type: Object, default: null },
+  },
+  amenities: {
+    type: [Object],
+    default: [],
+  },
+  accessPoints: {
+    type: [Object],
+    default: [],
+  },
+  timeWindows: {
+    type: [Object],
+    default: [],
+  },
+  checkIns: {
+    type: Map,
+    of: Object,
+    default: {},
   },
 }, {
   timestamps: true,

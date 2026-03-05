@@ -4,6 +4,7 @@ import {
   createDeadZone as apiCreate,
   deleteDeadZone as apiDelete,
   clearDeadZones as apiClear,
+  updateDeadZone as apiUpdate,
 } from '../api/index.js';
 
 export default function useDeadZones() {
@@ -60,5 +61,19 @@ export default function useDeadZones() {
     }
   }, []);
 
-  return { deadZones, loading, loadDeadZones, addDeadZone, removeDeadZone, clearAll, setDeadZones };
+  const updateDeadZone = useCallback(async (id, data) => {
+    setLoading(true);
+    try {
+      const result = await apiUpdate(id, data);
+      setDeadZones(result.deadZones || []);
+      return result;
+    } catch (err) {
+      console.error('updateDeadZone error:', err);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { deadZones, loading, loadDeadZones, addDeadZone, removeDeadZone, clearAll, setDeadZones, updateDeadZone };
 }

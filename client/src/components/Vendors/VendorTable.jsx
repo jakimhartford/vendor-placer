@@ -3,20 +3,23 @@ import { TIER_COLORS, EMPTY_COLOR } from '../../utils/tierColors.js';
 import { generateShareLink } from '../../api/index.js';
 
 const COLUMNS = [
-  { key: 'name', label: 'Name', width: '30%' },
-  { key: 'category', label: 'Type', width: '15%' },
-  { key: 'tier', label: 'Tier', width: '13%' },
+  { key: 'name', label: 'Name', width: '26%' },
+  { key: 'category', label: 'Type', width: '13%' },
+  { key: 'tier', label: 'Tier', width: '11%' },
+  { key: 'bid', label: 'Bid', width: '10%' },
   { key: 'spot', label: 'Spot', width: '22%' },
-  { key: 'status', label: '', width: '20%' },
+  { key: 'status', label: '', width: '18%' },
 ];
 
-export default function VendorTable({ vendors, assignments, spots, onSelectVendor, onReassign, currentProjectId }) {
+export default function VendorTable({ vendors, assignments, spots, onSelectVendor, onReassign, currentProjectId, onUpdateVendor }) {
   const [sortKey, setSortKey] = useState('name');
   const [sortDir, setSortDir] = useState(1);
   const [search, setSearch] = useState('');
   const [editingVendorId, setEditingVendorId] = useState(null);
   const [filterUnplaced, setFilterUnplaced] = useState(false);
   const [copiedVendorId, setCopiedVendorId] = useState(null);
+  const [editingBidId, setEditingBidId] = useState(null);
+  const [bidValue, setBidValue] = useState('');
 
   // Build vendorId -> { spotId, spotLabel, allSpots } map
   const vendorSpotMap = useMemo(() => {
@@ -81,7 +84,13 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
 
     return [...list].sort((a, b) => {
       let aVal, bVal;
-      if (sortKey === 'spot') {
+      if (sortKey === 'bid') {
+        aVal = a.bid || 0;
+        bVal = b.bid || 0;
+        if (aVal < bVal) return -1 * sortDir;
+        if (aVal > bVal) return 1 * sortDir;
+        return 0;
+      } else if (sortKey === 'spot') {
         aVal = (vendorSpotMap[a.id]?.label || '').toLowerCase();
         bVal = (vendorSpotMap[b.id]?.label || '').toLowerCase();
       } else if (sortKey === 'status') {
@@ -261,6 +270,42 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
                     >
                       {v.tier || '—'}
                     </span>
+                  </td>
+                  <td>
+                    {editingBidId === v.id ? (
+                      <input
+                        type="number"
+                        autoFocus
+                        value={bidValue}
+                        onChange={(e) => setBidValue(e.target.value)}
+                        onBlur={() => {
+                          const val = Math.max(0, parseFloat(bidValue) || 0);
+                          if (onUpdateVendor) onUpdateVendor(v.id, { bid: val });
+                          setEditingBidId(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') e.target.blur();
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          width: '100%', fontSize: 10, padding: '2px 4px',
+                          background: '#1e293b', color: '#e2e8f0', border: '1px solid #facc15',
+                          borderRadius: 4, boxSizing: 'border-box',
+                        }}
+                      />
+                    ) : (
+                      <span
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setBidValue(v.bid || 0);
+                          setEditingBidId(v.id);
+                        }}
+                        style={{ cursor: 'pointer', color: (v.bid || 0) > 0 ? '#34d399' : '#475569', fontSize: 11 }}
+                        title="Click to edit bid"
+                      >
+                        {(v.bid || 0) > 0 ? `$${v.bid}` : '-'}
+                      </span>
+                    )}
                   </td>
                   <td>
                     {isEditing ? (

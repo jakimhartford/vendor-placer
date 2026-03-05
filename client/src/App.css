@@ -300,3 +300,18 @@ select {
   background: #334155;
   border-radius: 3px;
 }
+
+/* ---------- Print ---------- */
+@media print {
+  .sidebar {
+    display: none !important;
+  }
+  .map-area {
+    width: 100vw !important;
+    height: 100vh !important;
+  }
+  .leaflet-control-zoom,
+  .leaflet-control-attribution {
+    display: none !important;
+  }
+}

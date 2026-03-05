@@ -10,6 +10,9 @@ import { placementRoutes } from './routes/placements.js';
 import { projectRoutes } from './routes/projects.js';
 import { deadZoneRoutes } from './routes/deadZones.js';
 import { shareRoutes } from './routes/share.js';
+import { amenityRoutes } from './routes/amenities.js';
+import { logisticsRoutes } from './routes/logistics.js';
+import { checkinRoutes } from './routes/checkin.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -28,6 +31,9 @@ app.use('/api/spots', requireAuth, spotRoutes);
 app.use('/api/placements', requireAuth, placementRoutes);
 app.use('/api/projects', requireAuth, projectRoutes);
 app.use('/api/dead-zones', requireAuth, deadZoneRoutes);
+app.use('/api/amenities', requireAuth, amenityRoutes);
+app.use('/api/logistics', requireAuth, logisticsRoutes);
+app.use('/api/projects', checkinRoutes);
 
 async function start() {
   await connectDB();

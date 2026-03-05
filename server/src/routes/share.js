@@ -46,14 +46,28 @@ shareRoutes.get('/share/:token', async (req, res) => {
       .filter(([, vid]) => vid === payload.vendorId)
       .map(([spotId]) => spotId);
 
+    // Find vendor's time window based on spot area label
+    let timeWindow = null;
+    if (assignedSpotIds.length > 0 && project.timeWindows?.length) {
+      const spotFeature = (project.spotsGeoJSON?.features || []).find(
+        (f) => f.properties?.id === assignedSpotIds[0]
+      );
+      const areaLabel = spotFeature?.properties?.label?.charAt(0);
+      if (areaLabel) {
+        timeWindow = project.timeWindows.find((tw) => tw.area === areaLabel) || null;
+      }
+    }
+
     return res.json({
       project: {
         name: project.name,
         spotsGeoJSON: project.spotsGeoJSON,
         deadZones: project.deadZones || [],
+        accessPoints: project.accessPoints || [],
       },
       vendor,
       assignedSpotIds,
+      timeWindow,
     });
   } catch (err) {
     if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {

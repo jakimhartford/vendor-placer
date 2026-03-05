@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Popup } from 'react-leaflet';
+import { generateShareLink } from '../../api/index.js';
+import { TIER_COLORS } from '../../utils/tierColors.js';
 
 const CATEGORIES = ['food', 'art', 'craft', 'jewelry', 'clothing', 'services', 'other'];
 const TIERS = ['platinum', 'gold', 'silver', 'bronze'];
@@ -28,8 +30,48 @@ function CheckboxGroup({ label, options, selected, onChange }) {
   );
 }
 
-export default function SpotEditPopup({ spot, position, onSave, onDelete, onClose, assignedVendorId, onStartMove }) {
+function Badge({ text, color }) {
+  return (
+    <span style={{
+      display: 'inline-block', padding: '2px 8px', fontSize: 10, borderRadius: 9999,
+      background: color || '#475569', color: '#fff', fontWeight: 600, textTransform: 'capitalize',
+    }}>
+      {text}
+    </span>
+  );
+}
+
+export default function SpotEditPopup({
+  spot, position, onSave, onDelete, onClose, assignedVendorId, onStartMove,
+  vendors, currentProjectId, pricingConfig, amenities,
+}) {
   const props = spot?.properties || {};
+
+  // Find assigned vendor
+  const vendor = useMemo(() => {
+    if (!assignedVendorId || !vendors?.length) return null;
+    return vendors.find((v) => v.id === assignedVendorId) || null;
+  }, [assignedVendorId, vendors]);
+
+  // Nearby amenities (within ~50m)
+  const nearbyAmenities = useMemo(() => {
+    if (!amenities?.length || !spot?.geometry) return [];
+    const coords = spot.geometry.coordinates[0];
+    const n = coords.length - 1;
+    let latSum = 0, lngSum = 0;
+    for (let i = 0; i < n; i++) { lngSum += coords[i][0]; latSum += coords[i][1]; }
+    const spotLat = latSum / n;
+    const spotLng = lngSum / n;
+    const threshold = 0.0005; // ~50m
+    return amenities.filter((a) => {
+      const dLat = a.lat - spotLat;
+      const dLng = a.lng - spotLng;
+      return Math.sqrt(dLat * dLat + dLng * dLng) < threshold;
+    });
+  }, [amenities, spot]);
+
+  // Start in view mode if vendor is assigned, edit mode otherwise
+  const [mode, setMode] = useState(vendor ? 'view' : 'edit');
 
   const [label, setLabel] = useState(props.label || '');
   const [isCorner, setIsCorner] = useState(!!props.isCorner);
@@ -41,8 +83,8 @@ export default function SpotEditPopup({ spot, position, onSave, onDelete, onClos
   const [allowedTiers, setAllowedTiers] = useState(props.allowedTiers || []);
   const [deadZone, setDeadZone] = useState(!!props.deadZone);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  // Reset form when spot changes
   useEffect(() => {
     const p = spot?.properties || {};
     setLabel(p.label || '');
@@ -55,56 +97,173 @@ export default function SpotEditPopup({ spot, position, onSave, onDelete, onClos
     setAllowedCategories(p.allowedCategories || []);
     setAllowedTiers(p.allowedTiers || []);
     setConfirmDelete(false);
-  }, [spot]);
+    setCopied(false);
+    setMode(vendor ? 'view' : 'edit');
+  }, [spot]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!spot || !position) return null;
 
   const handleSave = () => {
     onSave(props.id, {
-      label,
-      isCorner,
-      premium,
-      deadZone,
+      label, isCorner, premium, deadZone,
       trafficScore: Math.min(10, Math.max(1, trafficScore)),
-      excludedCategories,
-      excludedTiers,
-      allowedCategories,
-      allowedTiers,
+      excludedCategories, excludedTiers, allowedCategories, allowedTiers,
     });
   };
 
   const handleDelete = () => {
-    if (!confirmDelete) {
-      setConfirmDelete(true);
-      return;
-    }
+    if (!confirmDelete) { setConfirmDelete(true); return; }
     onDelete(props.id);
   };
 
-  const inputStyle = {
-    width: '100%',
-    padding: '3px 6px',
-    fontSize: 12,
-    border: '1px solid #cbd5e1',
-    borderRadius: 4,
-    boxSizing: 'border-box',
+  const handleShare = async () => {
+    if (!currentProjectId || !assignedVendorId) return;
+    try {
+      const { url } = await generateShareLink(currentProjectId, assignedVendorId);
+      const fullUrl = `${window.location.origin}${url}`;
+      await navigator.clipboard.writeText(fullUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* ignore */ }
   };
 
+  // Calculate price if pricing config exists
+  let spotPrice = null;
+  if (pricingConfig) {
+    const typeKey = props.premium ? 'premium' : props.isCorner ? 'corner' : 'regular';
+    const basePrice = pricingConfig.basePriceByType?.[typeKey] || 100;
+    const tierMult = vendor ? (pricingConfig.tierMultipliers?.[vendor.tier] || 1) : 1;
+    const catMult = vendor ? (pricingConfig.categoryMultipliers?.[vendor.category] || 1) : 1;
+    spotPrice = Math.round(basePrice * tierMult * catMult);
+  }
+
+  const inputStyle = {
+    width: '100%', padding: '3px 6px', fontSize: 12,
+    border: '1px solid #cbd5e1', borderRadius: 4, boxSizing: 'border-box',
+  };
+
+  const AMENITY_ICONS = { power: '\u26A1', water: '\uD83D\uDCA7', restroom: '\uD83D\uDEBB', trash: '\uD83D\uDDD1' };
+
+  // ── VIEW MODE ──
+  if (mode === 'view' && vendor) {
+    return (
+      <Popup position={position} maxWidth={320} minWidth={280} closeButton={true}
+        eventHandlers={{ remove: onClose }}>
+        <div style={{ fontSize: 12, color: '#1e293b', minWidth: 260 }}
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}>
+
+          {/* Spot label */}
+          <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>
+            Spot {props.label}
+            {props.isCorner && ' \u00B7 Corner'}
+            {props.premium && ' \u00B7 Premium'}
+          </div>
+
+          {/* Vendor name */}
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>
+            {vendor.name}
+            {vendor.premium && <span style={{ color: '#facc15', marginLeft: 4 }} title="Premium">{'\u2605'}</span>}
+          </div>
+
+          {/* Badges */}
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
+            <Badge text={vendor.category} color={TIER_COLORS[vendor.category] || '#475569'} />
+            <Badge text={vendor.tier} color={TIER_COLORS[vendor.tier] || '#475569'} />
+            {(vendor.booths || 1) > 1 && <Badge text={`${vendor.booths} booths`} color="#7c3aed" />}
+          </div>
+
+          {/* Bid */}
+          {(vendor.bid || 0) > 0 && (
+            <div style={{ fontSize: 11, color: '#059669', marginBottom: 4 }}>
+              Bid: ${vendor.bid}
+            </div>
+          )}
+
+          {/* Price */}
+          {spotPrice !== null && (
+            <div style={{ fontSize: 11, color: '#3b82f6', marginBottom: 4 }}>
+              Price: ${spotPrice}
+            </div>
+          )}
+
+          {/* Conflicts */}
+          {vendor.conflicts?.length > 0 && (
+            <div style={{ fontSize: 10, color: '#ef4444', marginBottom: 4 }}>
+              Conflicts: {vendor.conflicts.join(', ')}
+            </div>
+          )}
+
+          {/* Nearby Amenities */}
+          {nearbyAmenities.length > 0 && (
+            <div style={{ marginBottom: 6 }}>
+              <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>Nearby Amenities</div>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                {nearbyAmenities.map((a) => (
+                  <span key={a.id} style={{
+                    fontSize: 10, background: '#f0f9ff', padding: '2px 6px', borderRadius: 4,
+                  }}>
+                    {AMENITY_ICONS[a.type] || ''} {a.type}{a.notes ? `: ${a.notes}` : ''}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div style={{ display: 'flex', gap: 4, marginTop: 8 }}>
+            {currentProjectId && (
+              <button onClick={handleShare} style={{
+                flex: 1, padding: '5px 0', fontSize: 11, fontWeight: 600,
+                background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer',
+              }}>
+                {copied ? 'Copied!' : 'Share Link'}
+              </button>
+            )}
+            {onStartMove && (
+              <button onClick={() => onStartMove(props.id)} style={{
+                flex: 1, padding: '5px 0', fontSize: 11, fontWeight: 600,
+                background: '#8b5cf6', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer',
+              }}>
+                Move
+              </button>
+            )}
+            <button onClick={() => setMode('edit')} style={{
+              flex: 1, padding: '5px 0', fontSize: 11, fontWeight: 600,
+              background: '#475569', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer',
+            }}>
+              Edit Spot
+            </button>
+          </div>
+        </div>
+      </Popup>
+    );
+  }
+
+  // ── EDIT MODE ──
   return (
     <Popup position={position} maxWidth={320} minWidth={280} closeButton={true}
       eventHandlers={{ remove: onClose }}>
       <div style={{ fontSize: 12, color: '#1e293b', minWidth: 260 }}
         onClick={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}>
-        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>Edit Spot</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>Edit Spot</div>
+          {vendor && (
+            <button onClick={() => setMode('view')} style={{
+              background: 'none', border: 'none', color: '#3b82f6', fontSize: 11,
+              cursor: 'pointer', fontWeight: 600,
+            }}>
+              View Info
+            </button>
+          )}
+        </div>
 
-        {/* Label */}
         <div style={{ marginBottom: 6 }}>
           <label style={{ fontSize: 10, color: '#64748b', display: 'block', marginBottom: 2 }}>Label</label>
           <input type="text" value={label} onChange={(e) => setLabel(e.target.value)} style={inputStyle} />
         </div>
 
-        {/* Corner + Premium */}
         <div style={{ display: 'flex', gap: 16, marginBottom: 6 }}>
           <label style={{ fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
             <input type="checkbox" checked={isCorner} onChange={(e) => setIsCorner(e.target.checked)} />
@@ -120,7 +279,6 @@ export default function SpotEditPopup({ spot, position, onSave, onDelete, onClos
           </label>
         </div>
 
-        {/* Traffic Score */}
         <div style={{ marginBottom: 6 }}>
           <label style={{ fontSize: 10, color: '#64748b', display: 'block', marginBottom: 2 }}>
             Traffic Score ({trafficScore})
@@ -132,17 +290,13 @@ export default function SpotEditPopup({ spot, position, onSave, onDelete, onClos
 
         <CheckboxGroup label="Excluded Categories" options={CATEGORIES}
           selected={excludedCategories} onChange={setExcludedCategories} />
-
         <CheckboxGroup label="Excluded Tiers" options={TIERS}
           selected={excludedTiers} onChange={setExcludedTiers} />
-
         <CheckboxGroup label="Allowed Categories (empty = all)" options={CATEGORIES}
           selected={allowedCategories} onChange={setAllowedCategories} />
-
         <CheckboxGroup label="Allowed Tiers (empty = all)" options={TIERS}
           selected={allowedTiers} onChange={setAllowedTiers} />
 
-        {/* Move vendor */}
         {assignedVendorId && onStartMove && (
           <button onClick={() => onStartMove(props.id)} style={{
             width: '100%', padding: '5px 0', fontSize: 12, fontWeight: 600, marginTop: 6,
@@ -152,7 +306,6 @@ export default function SpotEditPopup({ spot, position, onSave, onDelete, onClos
           </button>
         )}
 
-        {/* Actions */}
         <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
           <button onClick={handleSave} style={{
             flex: 1, padding: '5px 0', fontSize: 12, fontWeight: 600,

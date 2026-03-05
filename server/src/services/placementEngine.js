@@ -207,10 +207,12 @@ export function runPlacement(vendors, spotsGeoJSON, options = {}) {
     return false;
   }
 
-  // Sort vendors by tier priority descending
-  const sortedVendors = [...vendors].sort(
-    (a, b) => (TIER_PRIORITY[b.tier] || 0) - (TIER_PRIORITY[a.tier] || 0)
-  );
+  // Sort vendors by tier priority descending, then by bid (higher bids first within same tier)
+  const sortedVendors = [...vendors].sort((a, b) => {
+    const tierDiff = (TIER_PRIORITY[b.tier] || 0) - (TIER_PRIORITY[a.tier] || 0);
+    if (tierDiff !== 0) return tierDiff;
+    return (b.bid || 0) - (a.bid || 0);
+  });
 
   // Phase 1: Premium vendors get first pick of corner/high-traffic spots
   const premiumVendors = sortedVendors.filter((v) => v.premium);

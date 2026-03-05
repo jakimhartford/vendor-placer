@@ -39,6 +39,39 @@ deadZoneRoutes.post('/', (req, res) => {
   });
 });
 
+// PATCH /api/dead-zones/:id — update polygon/rotation
+deadZoneRoutes.patch('/:id', (req, res) => {
+  const session = getSession(req.user.id);
+  const idx = session.deadZones.findIndex((dz) => dz.id === req.params.id);
+  if (idx === -1) {
+    return res.status(404).json({ error: 'Dead zone not found' });
+  }
+
+  const { polygon } = req.body;
+  if (!Array.isArray(polygon) || polygon.length < 3) {
+    return res.status(400).json({ error: 'polygon must be an array of at least 3 [lat, lng] points' });
+  }
+
+  session.deadZones[idx].polygon = polygon;
+
+  // Re-check spot overlaps with updated dead zone
+  const before = session.spotsGeoJSON.features.length;
+  session.spotsGeoJSON = {
+    ...session.spotsGeoJSON,
+    features: session.spotsGeoJSON.features.filter(
+      (f) => !spotOverlapsDeadZone(f, [session.deadZones[idx]])
+    ),
+  };
+  const removed = before - session.spotsGeoJSON.features.length;
+
+  return res.json({
+    deadZone: session.deadZones[idx],
+    removedSpots: removed,
+    spotsGeoJSON: session.spotsGeoJSON,
+    deadZones: session.deadZones,
+  });
+});
+
 // DELETE /api/dead-zones/:id
 deadZoneRoutes.delete('/:id', (req, res) => {
   const session = getSession(req.user.id);

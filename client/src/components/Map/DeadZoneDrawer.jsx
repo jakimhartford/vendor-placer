@@ -15,8 +15,10 @@ export default function DeadZoneDrawer({ active, onAddDeadZone, onDone }) {
   const widthRef = useRef(DEFAULT_WIDTH_FT);
   const [phase, setPhase] = useState('idle');
   const [widthFt, setWidthFt] = useState(DEFAULT_WIDTH_FT);
+  const rotationRef = useRef(0);
+  const [rotation, setRotation] = useState(0);
 
-  const buildRotatedRect = useCallback((p1, p2, wFt) => {
+  const buildRotatedRect = useCallback((p1, p2, wFt, angleDeg = 0) => {
     const dx = p2.lng - p1.lng;
     const dy = p2.lat - p1.lat;
     const len = Math.sqrt(dx * dx + dy * dy);
@@ -27,18 +29,36 @@ export default function DeadZoneDrawer({ active, onAddDeadZone, onDone }) {
     const nx = -dy / len * halfW_lng;
     const ny = dx / len * halfW_lat;
 
-    return [
+    const corners = [
       [p1.lat + ny, p1.lng + nx],
       [p2.lat + ny, p2.lng + nx],
       [p2.lat - ny, p2.lng - nx],
       [p1.lat - ny, p1.lng - nx],
     ];
+
+    if (angleDeg === 0) return corners;
+
+    // Rotate around midpoint
+    const midLat = (p1.lat + p2.lat) / 2;
+    const midLng = (p1.lng + p2.lng) / 2;
+    const rad = (angleDeg * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+
+    return corners.map(([lat, lng]) => {
+      const dLat = lat - midLat;
+      const dLng = lng - midLng;
+      return [
+        midLat + dLat * cos - dLng * sin,
+        midLng + dLat * sin + dLng * cos,
+      ];
+    });
   }, []);
 
   const updatePreview = useCallback(() => {
     if (pointsRef.current.length < 2) return;
     const [p1, p2] = pointsRef.current;
-    const corners = buildRotatedRect(p1, p2, widthRef.current);
+    const corners = buildRotatedRect(p1, p2, widthRef.current, rotationRef.current);
     if (!corners) return;
 
     if (previewRef.current) {
@@ -140,11 +160,13 @@ export default function DeadZoneDrawer({ active, onAddDeadZone, onDone }) {
     e.stopPropagation();
     if (pointsRef.current.length < 2) return;
     const [p1, p2] = pointsRef.current;
-    const corners = buildRotatedRect(p1, p2, widthRef.current);
+    const corners = buildRotatedRect(p1, p2, widthRef.current, rotationRef.current);
     if (!corners) return;
 
     clearAll();
     setPhase('idle');
+    setRotation(0);
+    rotationRef.current = 0;
 
     // Send polygon coordinates to server — server handles overlap detection & spot removal
     if (onAddDeadZone) {
@@ -204,6 +226,26 @@ export default function DeadZoneDrawer({ active, onAddDeadZone, onDone }) {
               }}
             />
             ft
+          </label>
+          <label style={{
+            display: 'flex', alignItems: 'center', gap: 4, color: '#fff',
+            fontSize: 12, fontWeight: 600, background: '#1e293b', padding: '4px 8px',
+            borderRadius: 6, boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          }}>
+            Rot: {rotation}°
+            <input
+              type="range"
+              value={rotation}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                setRotation(val);
+                rotationRef.current = val;
+                updatePreview();
+              }}
+              min={-180}
+              max={180}
+              style={{ width: 80 }}
+            />
           </label>
           <button onClick={handleConfirm} style={{
             padding: '6px 14px', background: '#dc2626', color: '#fff', border: 'none',

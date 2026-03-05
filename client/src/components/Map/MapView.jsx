@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, forwardRef } from 'react';
 import { MapContainer, TileLayer, Polygon, Popup } from 'react-leaflet';
 import { MAP_CENTER, DEFAULT_ZOOM, GOOGLE_TILE_STYLES } from '../../utils/constants.js';
 import SpotLayer, { featureCenter } from './SpotLayer.jsx';
@@ -8,15 +8,22 @@ import SpotPlacer from './SpotPlacer.jsx';
 import LocationSearch from './LocationSearch.jsx';
 import SpotEditPopup from './SpotEditPopup.jsx';
 import DeadZoneDrawer from './DeadZoneDrawer.jsx';
+import DeadZoneEditor from './DeadZoneEditor.jsx';
+import AmenityLayer from './AmenityLayer.jsx';
+import AmenityPlacer from './AmenityPlacer.jsx';
+import AccessPointLayer from './AccessPointLayer.jsx';
 
-export default function MapView({
+const MapView = forwardRef(function MapView({
   spots, vendors, assignments, selectedSpotId, paths,
   onPathDrawn, streetDrawMode, spotPlaceMode, onSpotPlaced,
   onSpotClick, editingSpot, onSpotSave, onSpotDelete, onSpotEditClose,
   movingVendor, selectedSpotIds, deadZones, deadZoneDrawMode, onAddDeadZone, onDeadZoneDrawDone,
-  onRemoveDeadZone, onStartMove,
-}) {
+  onRemoveDeadZone, onStartMove, onUpdateDeadZone, currentProjectId, pricingConfig,
+  amenities, amenityPlaceMode, amenityType, onPlaceAmenity, onDeleteAmenity, amenitiesVisible,
+  accessPoints, accessPointPlaceMode, onPlaceAccessPoint, onDeleteAccessPoint,
+}, ref) {
   const [mapStyle, setMapStyle] = useState('streets');
+  const [editingDeadZone, setEditingDeadZone] = useState(null);
 
   // Compute popup position from the editing spot
   const editPosition = editingSpot
@@ -26,6 +33,7 @@ export default function MapView({
   const tileConfig = GOOGLE_TILE_STYLES[mapStyle];
 
   return (
+    <div ref={ref} style={{ width: '100%', height: '100%' }}>
     <MapContainer
       center={MAP_CENTER}
       zoom={DEFAULT_ZOOM}
@@ -76,16 +84,28 @@ export default function MapView({
           <Popup>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Dead Zone</div>
-              <button
-                onClick={() => onRemoveDeadZone(dz.id)}
-                style={{
-                  padding: '4px 12px', background: '#dc2626', color: '#fff',
-                  border: 'none', borderRadius: 4, fontWeight: 600, fontSize: 12,
-                  cursor: 'pointer',
-                }}
-              >
-                Remove
-              </button>
+              <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                <button
+                  onClick={() => setEditingDeadZone(dz)}
+                  style={{
+                    padding: '4px 12px', background: '#f59e0b', color: '#000',
+                    border: 'none', borderRadius: 4, fontWeight: 600, fontSize: 12,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => onRemoveDeadZone(dz.id)}
+                  style={{
+                    padding: '4px 12px', background: '#dc2626', color: '#fff',
+                    border: 'none', borderRadius: 4, fontWeight: 600, fontSize: 12,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Remove
+                </button>
+              </div>
             </div>
           </Popup>
         </Polygon>
@@ -121,6 +141,19 @@ export default function MapView({
           Click a spot to move vendor here (Esc to cancel)
         </div>
       )}
+      <AmenityLayer amenities={amenities} onDelete={onDeleteAmenity} visible={amenitiesVisible} />
+      <AmenityPlacer active={amenityPlaceMode} amenityType={amenityType} onPlace={onPlaceAmenity} />
+      <AccessPointLayer accessPoints={accessPoints} onDelete={onDeleteAccessPoint} active={accessPointPlaceMode} onPlace={onPlaceAccessPoint} />
+      {editingDeadZone && (
+        <DeadZoneEditor
+          deadZone={editingDeadZone}
+          onUpdate={(id, data) => {
+            if (onUpdateDeadZone) onUpdateDeadZone(id, data);
+            setEditingDeadZone(null);
+          }}
+          onClose={() => setEditingDeadZone(null)}
+        />
+      )}
       {editingSpot && editPosition && (
         <SpotEditPopup
           spot={editingSpot}
@@ -130,8 +163,15 @@ export default function MapView({
           onClose={onSpotEditClose}
           assignedVendorId={assignments?.[editingSpot?.properties?.id]}
           onStartMove={onStartMove}
+          vendors={vendors}
+          currentProjectId={currentProjectId}
+          pricingConfig={pricingConfig}
+          amenities={amenities}
         />
       )}
     </MapContainer>
+    </div>
   );
-}
+});
+
+export default MapView;

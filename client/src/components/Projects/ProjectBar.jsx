@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function ProjectBar({
   projects,
@@ -17,6 +18,7 @@ export default function ProjectBar({
   const [showNew, setShowNew] = useState(false);
   const [versionName, setVersionName] = useState('');
   const [showVersionInput, setShowVersionInput] = useState(false);
+  const navigate = useNavigate();
 
   const handleSaveNew = () => {
     if (!newName.trim()) return;
@@ -86,6 +88,16 @@ export default function ProjectBar({
               style={{ width: 'auto', padding: '4px 10px', fontSize: 11, marginBottom: 0 }}
             >
               Del
+            </button>
+            <button
+              onClick={() => navigate(`/checkin/${currentProjectId}`)}
+              style={{
+                width: 'auto', padding: '4px 10px', fontSize: 11, borderRadius: 4,
+                background: '#10b981', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600,
+              }}
+              title="Check-In View"
+            >
+              Check-In
             </button>
           </>
         )}

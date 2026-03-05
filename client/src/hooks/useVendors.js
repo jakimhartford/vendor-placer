@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { fetchVendors, uploadVendors, clearVendors } from '../api/index.js';
+import { fetchVendors, uploadVendors, clearVendors, updateVendor as apiUpdateVendor } from '../api/index.js';
 
 export default function useVendors() {
   const [vendors, setVendors] = useState([]);
@@ -51,5 +51,15 @@ export default function useVendors() {
     }
   }, []);
 
-  return { vendors, loading, error, loadVendors, uploadCsv, clearAll };
+  const updateVendor = useCallback(async (id, updates) => {
+    try {
+      const updated = await apiUpdateVendor(id, updates);
+      setVendors((prev) => prev.map((v) => (v.id === id ? { ...v, ...updated } : v)));
+      return updated;
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+    }
+  }, []);
+
+  return { vendors, loading, error, loadVendors, uploadCsv, clearAll, updateVendor, setVendors };
 }

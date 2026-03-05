@@ -60,7 +60,10 @@ export function parseVendorCsv(csvString) {
     // Booths: number of spots this vendor needs (default 1)
     const booths = Math.max(1, parseInt(row.booths, 10) || 1);
 
-    return { name, category, tier, exclusions, conflicts, premium, booths };
+    // Bid: optional dollar amount for spot priority within same tier (default 0)
+    const bid = Math.max(0, parseFloat(row.bid) || 0);
+
+    return { name, category, tier, exclusions, conflicts, premium, booths, bid };
   });
 
   return vendors;

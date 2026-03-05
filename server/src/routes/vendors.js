@@ -64,6 +64,24 @@ vendorRoutes.delete('/', (req, res) => {
   return res.json({ message: `Cleared ${count} vendors` });
 });
 
+// PATCH /api/vendors/:id — update a vendor's fields
+vendorRoutes.patch('/:id', (req, res) => {
+  const session = getSession(req.user.id);
+  const idx = session.vendors.findIndex((v) => v.id === req.params.id);
+  if (idx === -1) {
+    return res.status(404).json({ error: 'Vendor not found' });
+  }
+  const updates = req.body;
+  // Only allow updating safe fields
+  const allowed = ['bid', 'name', 'category', 'tier', 'premium', 'booths', 'exclusions', 'conflicts'];
+  for (const key of Object.keys(updates)) {
+    if (allowed.includes(key)) {
+      session.vendors[idx][key] = updates[key];
+    }
+  }
+  return res.json(session.vendors[idx]);
+});
+
 // GET /api/vendors/samples — list available sample CSVs
 vendorRoutes.get('/samples', (_req, res) => {
   try {

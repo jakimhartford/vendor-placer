@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { calculateSpotPrice } from '../../utils/pricing.js';
 
 const BADGE_COLORS = {
   food: '#ef4444', art: '#8b5cf6', craft: '#f59e0b', jewelry: '#ec4899',
@@ -17,7 +18,7 @@ function Badge({ text, color }) {
   );
 }
 
-export default function SpotTable({ spots, vendors, assignments, onEditSpot }) {
+export default function SpotTable({ spots, vendors, assignments, onEditSpot, pricingConfig }) {
   const [search, setSearch] = useState('');
 
   const vendorMap = useMemo(() => {
@@ -71,6 +72,7 @@ export default function SpotTable({ spots, vendors, assignments, onEditSpot }) {
               <th style={{ padding: '4px 4px', color: '#94a3b8', fontWeight: 600 }}>Flags</th>
               <th style={{ padding: '4px 4px', color: '#94a3b8', fontWeight: 600 }}>Score</th>
               <th style={{ padding: '4px 4px', color: '#94a3b8', fontWeight: 600 }}>Restrictions</th>
+              {pricingConfig && <th style={{ padding: '4px 4px', color: '#94a3b8', fontWeight: 600 }}>Price</th>}
               <th style={{ padding: '4px 4px', color: '#94a3b8', fontWeight: 600 }}>Assigned</th>
             </tr>
           </thead>
@@ -105,6 +107,11 @@ export default function SpotTable({ spots, vendors, assignments, onEditSpot }) {
                       ? restrictions.map((r, i) => <Badge key={i} text={r.text} color={r.color} />)
                       : <span style={{ color: '#475569' }}>-</span>}
                   </td>
+                  {pricingConfig && (
+                    <td style={{ padding: '4px 4px', fontSize: 10, color: '#34d399' }}>
+                      {r.vendor ? `$${calculateSpotPrice(p, r.vendor, pricingConfig)}` : '-'}
+                    </td>
+                  )}
                   <td style={{ padding: '4px 4px', fontSize: 10 }}>
                     {r.vendor ? r.vendor.name : <span style={{ color: '#475569' }}>-</span>}
                   </td>

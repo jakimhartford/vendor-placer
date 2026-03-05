@@ -43,6 +43,9 @@ projectRoutes.get('/:id', async (req, res) => {
     if (project.vendors) setVendors(userId, project.vendors);
     if (project.placements) setPlacements(userId, project.placements);
     session.deadZones = project.deadZones || [];
+    session.amenities = project.amenities || [];
+    session.accessPoints = project.accessPoints || [];
+    session.timeWindows = project.timeWindows || [];
 
     return res.json({
       id: project._id,
@@ -54,6 +57,9 @@ projectRoutes.get('/:id', async (req, res) => {
       placements: project.placements,
       paths: project.paths,
       deadZones: project.deadZones || [],
+      amenities: project.amenities || [],
+      accessPoints: project.accessPoints || [],
+      timeWindows: project.timeWindows || [],
       mapCenter: project.mapCenter,
       zoom: project.zoom,
       settings: project.settings,
@@ -79,6 +85,9 @@ projectRoutes.post('/', async (req, res) => {
       vendors: getVendors(userId),
       placements: getPlacements(userId),
       deadZones: session.deadZones,
+      amenities: session.amenities,
+      accessPoints: session.accessPoints,
+      timeWindows: session.timeWindows,
       paths: paths || [],
       mapCenter: mapCenter || null,
       zoom: zoom || null,
@@ -115,6 +124,9 @@ projectRoutes.put('/:id', async (req, res) => {
     project.vendors = getVendors(userId);
     project.placements = getPlacements(userId);
     project.deadZones = session.deadZones;
+    project.amenities = session.amenities;
+    project.accessPoints = session.accessPoints;
+    project.timeWindows = session.timeWindows;
     project.paths = paths ?? project.paths;
     if (settings) project.settings = settings;
 
@@ -157,6 +169,9 @@ projectRoutes.post('/:id/versions', async (req, res) => {
       vendors: getVendors(userId),
       placements: getPlacements(userId),
       deadZones: session.deadZones,
+      amenities: session.amenities,
+      accessPoints: session.accessPoints,
+      timeWindows: session.timeWindows,
       paths: project.paths,
       settings: project.settings,
     };
@@ -205,12 +220,18 @@ projectRoutes.post('/:id/versions/:versionId/load', async (req, res) => {
     if (version.vendors) setVendors(userId, version.vendors);
     if (version.placements) setPlacements(userId, version.placements);
     session.deadZones = version.deadZones || [];
+    session.amenities = version.amenities || [];
+    session.accessPoints = version.accessPoints || [];
+    session.timeWindows = version.timeWindows || [];
 
     // Also update the project's top-level state
     project.spotsGeoJSON = version.spotsGeoJSON;
     project.vendors = version.vendors;
     project.placements = version.placements;
     project.deadZones = version.deadZones || [];
+    project.amenities = version.amenities || [];
+    project.accessPoints = version.accessPoints || [];
+    project.timeWindows = version.timeWindows || [];
     project.paths = version.paths || project.paths;
     if (version.settings) project.settings = version.settings;
     project.activeVersionId = version._id;

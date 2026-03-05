@@ -51,7 +51,7 @@ export default function ShareView() {
     );
   }
 
-  const { project, vendor, assignedSpotIds } = data;
+  const { project, vendor, assignedSpotIds, timeWindow } = data;
   const spots = project.spotsGeoJSON;
   const deadZones = project.deadZones || [];
   const assignedSet = new Set(assignedSpotIds || []);
@@ -126,6 +126,40 @@ export default function ShareView() {
             color: '#fca5a5',
           }}>
             No spot assigned yet
+          </div>
+        )}
+
+        {timeWindow && (
+          <div style={{
+            background: '#1e3a5f',
+            border: '1px solid #3b82f6',
+            borderRadius: 8,
+            padding: 12,
+            fontSize: 12,
+            marginTop: 12,
+          }}>
+            <div style={{ fontWeight: 600, marginBottom: 4, color: '#93c5fd' }}>Load-In Window</div>
+            <div style={{ color: '#bfdbfe' }}>
+              Area {timeWindow.area}: {timeWindow.start} - {timeWindow.end}
+            </div>
+          </div>
+        )}
+
+        {project.accessPoints?.length > 0 && (
+          <div style={{
+            background: '#064e3b',
+            border: '1px solid #10b981',
+            borderRadius: 8,
+            padding: 12,
+            fontSize: 12,
+            marginTop: 12,
+          }}>
+            <div style={{ fontWeight: 600, marginBottom: 4, color: '#6ee7b7' }}>Vehicle Access Points</div>
+            {project.accessPoints.map((ap, i) => (
+              <div key={i} style={{ color: '#a7f3d0', marginBottom: 2 }}>
+                {ap.label || 'Access Point'}
+              </div>
+            ))}
           </div>
         )}
       </div>

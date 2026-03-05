@@ -29,6 +29,17 @@ export default function PlacementControls({
   canRedo,
   onUndo,
   onRedo,
+  amenityPlaceMode,
+  onToggleAmenityPlace,
+  amenityType,
+  onAmenityTypeChange,
+  amenitiesVisible,
+  onToggleAmenitiesVisible,
+  amenityCount,
+  onClearAmenities,
+  accessPointPlaceMode,
+  onToggleAccessPointPlace,
+  accessPointCount,
 }) {
   const [spotSizeFt, setSpotSizeFt] = useState(12);
   const [spacingFt, setSpacingFt] = useState(4);
@@ -197,6 +208,77 @@ export default function PlacementControls({
           >
             Clear ({deadZoneCount})
           </button>
+        )}
+      </div>
+
+      {/* Amenity tools */}
+      <div style={{ display: 'flex', gap: 6, marginTop: 6, marginBottom: 0 }}>
+        <button
+          className="btn"
+          disabled={loading}
+          onClick={onToggleAmenityPlace}
+          style={{
+            flex: 1,
+            background: amenityPlaceMode ? '#991b1b' : '#f59e0b',
+            color: amenityPlaceMode ? '#fff' : '#000',
+            fontWeight: 600,
+            fontSize: 11,
+          }}
+        >
+          {amenityPlaceMode ? 'Stop Placing' : 'Place Amenity'}
+        </button>
+        {amenityPlaceMode && (
+          <select
+            value={amenityType}
+            onChange={(e) => onAmenityTypeChange(e.target.value)}
+            style={{
+              padding: '4px 6px', fontSize: 10, background: '#0f172a', color: '#e2e8f0',
+              border: '1px solid #334155', borderRadius: 4, marginBottom: 0,
+            }}
+          >
+            <option value="power">Power</option>
+            <option value="water">Water</option>
+            <option value="restroom">Restroom</option>
+            <option value="trash">Trash</option>
+          </select>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center' }}>
+        <label style={{ fontSize: 10, color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <input type="checkbox" checked={amenitiesVisible} onChange={onToggleAmenitiesVisible} />
+          Show Amenities{amenityCount > 0 ? ` (${amenityCount})` : ''}
+        </label>
+        {amenityCount > 0 && (
+          <button
+            className="btn btn-secondary"
+            style={{ padding: '2px 8px', fontSize: 10, width: 'auto', marginBottom: 0 }}
+            onClick={onClearAmenities}
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
+      {/* Access Point tools */}
+      <div style={{ display: 'flex', gap: 6, marginTop: 6, marginBottom: 0 }}>
+        <button
+          className="btn"
+          disabled={loading}
+          onClick={onToggleAccessPointPlace}
+          style={{
+            flex: 1,
+            background: accessPointPlaceMode ? '#991b1b' : '#10b981',
+            color: '#fff',
+            fontWeight: 600,
+            fontSize: 11,
+          }}
+        >
+          {accessPointPlaceMode ? 'Stop Placing' : 'Access Point'}
+        </button>
+        {accessPointCount > 0 && (
+          <span style={{ fontSize: 10, color: '#94a3b8', alignSelf: 'center' }}>
+            {accessPointCount} point{accessPointCount !== 1 ? 's' : ''}
+          </span>
         )}
       </div>
 

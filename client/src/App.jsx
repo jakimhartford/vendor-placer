@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import useVendors from './hooks/useVendors.js';
 import useSpots from './hooks/useSpots.js';
 import usePlacements from './hooks/usePlacements.js';
@@ -12,6 +12,12 @@ import PlacementControls from './components/Placement/PlacementControls.jsx';
 import PlacementStats from './components/Placement/PlacementStats.jsx';
 import ProjectBar from './components/Projects/ProjectBar.jsx';
 import SpotTable from './components/Spots/SpotTable.jsx';
+import PricingConfig from './components/Revenue/PricingConfig.jsx';
+import RevenueSummary from './components/Revenue/RevenueSummary.jsx';
+import useAmenities from './hooks/useAmenities.js';
+import useLogistics from './hooks/useLogistics.js';
+import LogisticsPanel from './components/Logistics/LogisticsPanel.jsx';
+import ExportPdfButton from './components/Export/ExportPdfButton.jsx';
 import WalkthroughTutorial, { STORAGE_KEY as TUTORIAL_KEY } from './components/Tutorial/WalkthroughTutorial.jsx';
 import { saveSpots as apiSaveSpots } from './api/index.js';
 import { useAuth } from './contexts/AuthContext.jsx';
@@ -25,6 +31,7 @@ export default function App() {
     loadVendors,
     uploadCsv,
     clearAll: clearVendors,
+    updateVendor,
   } = useVendors();
 
   const {
@@ -71,7 +78,29 @@ export default function App() {
     removeDeadZone,
     clearAll: clearDeadZones,
     setDeadZones,
+    updateDeadZone,
   } = useDeadZones();
+
+  const {
+    amenities,
+    loadAmenities,
+    addAmenity,
+    removeAmenity,
+    clearAll: clearAmenities,
+    setAmenities,
+  } = useAmenities();
+
+  const {
+    accessPoints,
+    timeWindows,
+    loadLogistics,
+    addAccessPoint,
+    removeAccessPoint,
+    addTimeWindow,
+    removeTimeWindow,
+    setAccessPoints,
+    setTimeWindows,
+  } = useLogistics();
 
   const {
     pushState,
@@ -121,10 +150,15 @@ export default function App() {
     }
   }, [captureSnapshot, redoState, markRedone, restoreSnapshot]);
 
+  const mapRef = useRef(null);
+
   // Project settings
   const [projectSettings, setProjectSettings] = useState({
     noSameAdjacentCategories: ['art', 'craft', 'jewelry', 'clothing'],
   });
+
+  // Pricing config
+  const [pricingConfig, setPricingConfig] = useState(null);
 
   // Street path state
   const [paths, setPaths] = useState([]);
@@ -136,6 +170,14 @@ export default function App() {
 
   // Dead zone draw mode
   const [deadZoneDrawMode, setDeadZoneDrawMode] = useState(false);
+
+  // Amenity state
+  const [amenityPlaceMode, setAmenityPlaceMode] = useState(false);
+  const [amenityType, setAmenityType] = useState('power');
+  const [amenitiesVisible, setAmenitiesVisible] = useState(true);
+
+  // Access point state
+  const [accessPointPlaceMode, setAccessPointPlaceMode] = useState(false);
 
   // Move vendor state
   const [movingVendor, setMovingVendor] = useState(null);
@@ -156,7 +198,9 @@ export default function App() {
     loadSpots();
     loadProjects();
     loadDeadZones();
-  }, [loadVendors, loadSpots, loadProjects, loadDeadZones]);
+    loadAmenities();
+    loadLogistics();
+  }, [loadVendors, loadSpots, loadProjects, loadDeadZones, loadAmenities, loadLogistics]);
 
   // Project handlers
   const handleLoadProject = useCallback(async (id) => {
@@ -165,23 +209,30 @@ export default function App() {
       await loadVendors();
       await loadSpots();
       await loadDeadZones();
+      await loadAmenities();
+      await loadLogistics();
       setPaths(data.paths || []);
       setPathLabelIdx(data.paths?.length || 0);
-      if (data.settings) setProjectSettings(data.settings);
+      if (data.settings) {
+        setProjectSettings(data.settings);
+        setPricingConfig(data.settings.pricingConfig || null);
+      }
       if (data.placements) {
         const raw = data.placements.assignments || {};
         updateAssignments(Array.isArray(raw) ? Object.fromEntries(raw.map((a) => [a.spotId, a.vendorId])) : raw);
       }
     }
-  }, [loadProject, loadVendors, loadSpots, loadDeadZones, updateAssignments]);
+  }, [loadProject, loadVendors, loadSpots, loadDeadZones, loadAmenities, loadLogistics, updateAssignments]);
 
   const handleSaveNewProject = useCallback(async (name) => {
-    await saveNewProject({ name, paths });
-  }, [saveNewProject, paths]);
+    const settings = { ...projectSettings, pricingConfig };
+    await saveNewProject({ name, paths, settings });
+  }, [saveNewProject, paths, projectSettings, pricingConfig]);
 
   const handleSaveProject = useCallback(async (id) => {
-    await saveProject(id, { paths });
-  }, [saveProject, paths]);
+    const settings = { ...projectSettings, pricingConfig };
+    await saveProject(id, { paths, settings });
+  }, [saveProject, paths, projectSettings, pricingConfig]);
 
   const handleDeleteProject = useCallback(async (id) => {
     await removeProject(id);
@@ -199,7 +250,10 @@ export default function App() {
       await loadDeadZones();
       setPaths(data.paths || []);
       setPathLabelIdx(data.paths?.length || 0);
-      if (data.settings) setProjectSettings(data.settings);
+      if (data.settings) {
+        setProjectSettings(data.settings);
+        setPricingConfig(data.settings.pricingConfig || null);
+      }
       if (data.placements) {
         const raw = data.placements.assignments || {};
         updateAssignments(Array.isArray(raw) ? Object.fromEntries(raw.map((a) => [a.spotId, a.vendorId])) : raw);
@@ -281,6 +335,14 @@ export default function App() {
   const handleDeadZoneDrawDone = useCallback(() => {
     setDeadZoneDrawMode(false);
   }, []);
+
+  const handleUpdateDeadZone = useCallback(async (id, data) => {
+    pushState(captureSnapshot());
+    const result = await updateDeadZone(id, data);
+    if (result?.spotsGeoJSON) {
+      setSpotsLocal(result.spotsGeoJSON);
+    }
+  }, [updateDeadZone, setSpotsLocal, pushState, captureSnapshot]);
 
   const handleClearGrid = async () => {
     pushState(captureSnapshot());
@@ -493,6 +555,29 @@ export default function App() {
             canRedo={canRedo}
             onUndo={handleUndo}
             onRedo={handleRedo}
+            amenityPlaceMode={amenityPlaceMode}
+            onToggleAmenityPlace={() => {
+              if (amenityPlaceMode) setAmenityPlaceMode(false);
+              else {
+                setStreetDrawMode(false); setSpotPlaceMode(false); setDeadZoneDrawMode(false); setAccessPointPlaceMode(false);
+                setAmenityPlaceMode(true);
+              }
+            }}
+            amenityType={amenityType}
+            onAmenityTypeChange={setAmenityType}
+            amenitiesVisible={amenitiesVisible}
+            onToggleAmenitiesVisible={() => setAmenitiesVisible((v) => !v)}
+            amenityCount={amenities.length}
+            onClearAmenities={clearAmenities}
+            accessPointPlaceMode={accessPointPlaceMode}
+            onToggleAccessPointPlace={() => {
+              if (accessPointPlaceMode) setAccessPointPlaceMode(false);
+              else {
+                setStreetDrawMode(false); setSpotPlaceMode(false); setDeadZoneDrawMode(false); setAmenityPlaceMode(false);
+                setAccessPointPlaceMode(true);
+              }
+            }}
+            accessPointCount={accessPoints.length}
           />
         </div>
 
@@ -502,12 +587,45 @@ export default function App() {
         </div>
 
         <div className="sidebar-section">
+          <h3>Export</h3>
+          <ExportPdfButton
+            mapRef={mapRef}
+            spots={spots}
+            vendors={vendors}
+            assignments={placements.assignments}
+            pricingConfig={pricingConfig}
+          />
+        </div>
+
+        <div className="sidebar-section">
+          <h3>Logistics</h3>
+          <LogisticsPanel
+            accessPoints={accessPoints}
+            timeWindows={timeWindows}
+            onAddTimeWindow={addTimeWindow}
+            onDeleteTimeWindow={removeTimeWindow}
+          />
+        </div>
+
+        <div className="sidebar-section">
+          <h3>Pricing & Revenue</h3>
+          <PricingConfig config={pricingConfig} onChange={setPricingConfig} />
+          <RevenueSummary
+            spots={spots}
+            vendors={vendors}
+            assignments={placements.assignments}
+            pricingConfig={pricingConfig}
+          />
+        </div>
+
+        <div className="sidebar-section">
           <h3>Spots</h3>
           <SpotTable
             spots={spots}
             vendors={vendors}
             assignments={placements.assignments}
             onEditSpot={handleEditSpotById}
+            pricingConfig={pricingConfig}
           />
         </div>
 
@@ -520,12 +638,14 @@ export default function App() {
             onSelectVendor={handleSelectVendor}
             onReassign={handleReassign}
             currentProjectId={currentProjectId}
+            onUpdateVendor={updateVendor}
           />
         </div>
       </aside>
 
       <main className="map-area">
         <MapView
+          ref={mapRef}
           spots={spots}
           vendors={vendors}
           assignments={placements.assignments}
@@ -548,6 +668,19 @@ export default function App() {
           onRemoveDeadZone={removeDeadZone}
           onDeadZoneDrawDone={handleDeadZoneDrawDone}
           onStartMove={handleStartMove}
+          onUpdateDeadZone={handleUpdateDeadZone}
+          currentProjectId={currentProjectId}
+          pricingConfig={pricingConfig}
+          amenities={amenities}
+          amenityPlaceMode={amenityPlaceMode}
+          amenityType={amenityType}
+          onPlaceAmenity={async (data) => { await addAmenity(data); }}
+          onDeleteAmenity={removeAmenity}
+          amenitiesVisible={amenitiesVisible}
+          accessPoints={accessPoints}
+          accessPointPlaceMode={accessPointPlaceMode}
+          onPlaceAccessPoint={async (data) => { await addAccessPoint(data); setAccessPointPlaceMode(false); }}
+          onDeleteAccessPoint={removeAccessPoint}
         />
       </main>
 
