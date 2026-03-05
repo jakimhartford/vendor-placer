@@ -14,6 +14,10 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
     const handleCreate = (e) => {
       if (e.shape !== 'Rectangle') return;
       layerRef.current = e.layer;
+      // Enable drag, edit vertices, and rotation
+      e.layer.pm.enable({ allowSelfIntersection: false });
+      if (e.layer.pm.enableRotate) e.layer.pm.enableRotate();
+      e.layer.pm.enableLayerDrag();
       setDrawn(true);
     };
 

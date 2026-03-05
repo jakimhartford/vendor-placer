@@ -10,6 +10,9 @@ export default function DrawToolbar({ onPathDrawn, streetDrawMode }) {
     map.pm.removeControls();
 
     const handleCreate = (e) => {
+      // Only handle Line shapes — let other handlers (e.g. DeadZoneDrawer) manage their own
+      if (e.shape !== 'Line') return;
+
       const geojson = e.layer.toGeoJSON();
       map.removeLayer(e.layer);
 
