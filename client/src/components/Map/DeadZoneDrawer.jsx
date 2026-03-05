@@ -8,22 +8,14 @@ const FT_TO_DEG_LNG = 0.0000034;
 
 export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone }) {
   const map = useMap();
-  const pointsRef = useRef([]);
   const markersRef = useRef([]);
   const previewRef = useRef(null);
   const lineRef = useRef(null);
-  const [phase, setPhase] = useState('idle'); // 'idle' | 'first' | 'second' | 'confirm'
+  const pointsRef = useRef([]);
+  const widthRef = useRef(DEFAULT_WIDTH_FT);
+  const [phase, setPhase] = useState('idle');
   const [widthFt, setWidthFt] = useState(DEFAULT_WIDTH_FT);
-
-  const clearAll = useCallback(() => {
-    markersRef.current.forEach((m) => map?.removeLayer(m));
-    markersRef.current = [];
-    if (previewRef.current && map) map.removeLayer(previewRef.current);
-    previewRef.current = null;
-    if (lineRef.current && map) map.removeLayer(lineRef.current);
-    lineRef.current = null;
-    pointsRef.current = [];
-  }, [map]);
+  const [matchCount, setMatchCount] = useState(0);
 
   const buildRotatedRect = useCallback((p1, p2, wFt) => {
     const dx = p2.lng - p1.lng;
@@ -31,7 +23,6 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
     const len = Math.sqrt(dx * dx + dy * dy);
     if (len === 0) return null;
 
-    // Normal vector (perpendicular) scaled to half-width
     const halfW_lat = (wFt / 2) * FT_TO_DEG_LAT;
     const halfW_lng = (wFt / 2) * FT_TO_DEG_LNG;
     const nx = -dy / len * halfW_lng;
@@ -45,10 +36,29 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
     ];
   }, []);
 
-  const updatePreview = useCallback((wFt) => {
+  const countSpots = useCallback((corners) => {
+    if (!corners) return 0;
+    const polyLatLngs = corners.map(([lat, lng]) => L.latLng(lat, lng));
+    let count = 0;
+    for (const feature of (spots?.features || [])) {
+      if (!feature.geometry || feature.geometry.type !== 'Polygon') continue;
+      const coords = feature.geometry.coordinates[0];
+      const n = coords.length - 1;
+      let latSum = 0, lngSum = 0;
+      for (let i = 0; i < n; i++) {
+        lngSum += coords[i][0];
+        latSum += coords[i][1];
+      }
+      const center = L.latLng(latSum / n, lngSum / n);
+      if (isPointInPolygon(center, polyLatLngs)) count++;
+    }
+    return count;
+  }, [spots]);
+
+  const updatePreview = useCallback(() => {
     if (pointsRef.current.length < 2) return;
     const [p1, p2] = pointsRef.current;
-    const corners = buildRotatedRect(p1, p2, wFt || widthFt);
+    const corners = buildRotatedRect(p1, p2, widthRef.current);
     if (!corners) return;
 
     if (previewRef.current) {
@@ -59,7 +69,23 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
         dashArray: '6,4',
       }).addTo(map);
     }
-  }, [map, widthFt, buildRotatedRect]);
+
+    if (lineRef.current) {
+      lineRef.current.setLatLngs(pointsRef.current);
+    }
+
+    setMatchCount(countSpots(corners));
+  }, [map, buildRotatedRect, countSpots]);
+
+  const clearAll = useCallback(() => {
+    markersRef.current.forEach((m) => map?.removeLayer(m));
+    markersRef.current = [];
+    if (previewRef.current && map) map.removeLayer(previewRef.current);
+    previewRef.current = null;
+    if (lineRef.current && map) map.removeLayer(lineRef.current);
+    lineRef.current = null;
+    pointsRef.current = [];
+  }, [map]);
 
   useEffect(() => {
     if (!map || !active) {
@@ -77,22 +103,45 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
       const latlng = e.latlng;
       pointsRef.current.push(latlng);
 
-      // Add marker
+      // Draggable marker
       const marker = L.circleMarker(latlng, {
-        radius: 5, color: '#dc2626', fillColor: '#fff', fillOpacity: 1, weight: 2,
+        radius: 7, color: '#dc2626', fillColor: '#fff', fillOpacity: 1, weight: 2,
+        interactive: true, draggable: false, // circleMarker can't drag, but we handle it below
       }).addTo(map);
       markersRef.current.push(marker);
 
       if (pointsRef.current.length === 1) {
         setPhase('second');
       } else if (pointsRef.current.length === 2) {
-        // Draw the centerline
         lineRef.current = L.polyline(pointsRef.current, {
-          color: '#dc2626', weight: 1, dashArray: '4,4',
+          color: '#dc2626', weight: 1, dashArray: '4,4', opacity: 0.5,
         }).addTo(map);
         updatePreview();
         map.getContainer().style.cursor = '';
         setPhase('confirm');
+
+        // Now replace circle markers with draggable real markers
+        markersRef.current.forEach((m) => map.removeLayer(m));
+        markersRef.current = [];
+
+        pointsRef.current.forEach((pt, idx) => {
+          const dragMarker = L.marker(pt, {
+            draggable: true,
+            icon: L.divIcon({
+              className: '',
+              html: `<div style="width:14px;height:14px;background:#dc2626;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.4);"></div>`,
+              iconSize: [14, 14],
+              iconAnchor: [7, 7],
+            }),
+          }).addTo(map);
+
+          dragMarker.on('drag', (e) => {
+            pointsRef.current[idx] = e.target.getLatLng();
+            updatePreview();
+          });
+
+          markersRef.current.push(dragMarker);
+        });
       }
     };
 
@@ -106,13 +155,15 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
   const handleWidthChange = (e) => {
     const val = parseInt(e.target.value) || DEFAULT_WIDTH_FT;
     setWidthFt(val);
-    updatePreview(val);
+    widthRef.current = val;
+    updatePreview();
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async (e) => {
+    e.stopPropagation();
     if (pointsRef.current.length < 2) return;
     const [p1, p2] = pointsRef.current;
-    const corners = buildRotatedRect(p1, p2, widthFt);
+    const corners = buildRotatedRect(p1, p2, widthRef.current);
     if (!corners) return;
 
     const polyLatLngs = corners.map(([lat, lng]) => L.latLng(lat, lng));
@@ -137,12 +188,13 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
     setPhase('idle');
 
     if (ids.length > 0 && onMarkDeadZones) {
-      onMarkDeadZones(ids);
+      await onMarkDeadZones(ids);
     }
     if (onDone) onDone();
   };
 
-  const handleCancel = () => {
+  const handleCancel = (e) => {
+    e.stopPropagation();
     clearAll();
     setPhase('idle');
     if (onDone) onDone();
@@ -151,20 +203,23 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
   if (!active) return null;
 
   const instructions = {
-    first: 'Click the START of the dead zone line',
-    second: 'Click the END of the dead zone line',
-    confirm: 'Adjust width, then confirm',
+    first: 'Click the START of the dead zone',
+    second: 'Click the END of the dead zone',
+    confirm: `${matchCount} spot${matchCount !== 1 ? 's' : ''} selected — drag markers to adjust`,
   };
 
   return (
-    <div style={{
-      position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)',
-      zIndex: 1000, display: 'flex', gap: 8, alignItems: 'center', pointerEvents: 'auto',
-    }}>
+    <div
+      style={{
+        position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)',
+        zIndex: 1000, display: 'flex', gap: 8, alignItems: 'center', pointerEvents: 'auto',
+      }}
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
       <div style={{
         background: '#dc2626', color: '#fff', padding: '6px 16px', borderRadius: 6,
         fontWeight: 600, fontSize: 13, boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-        pointerEvents: 'none',
       }}>
         {instructions[phase] || ''}
       </div>
