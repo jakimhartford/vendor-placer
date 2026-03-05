@@ -1,52 +1,76 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 
 export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone }) {
   const map = useMap();
-  const layerRef = useRef(null);
-  const phaseRef = useRef('draw'); // 'draw' | 'adjust'
+  const startRef = useRef(null);
+  const rectRef = useRef(null);
+  const [hasRect, setHasRect] = useState(false);
 
   useEffect(() => {
     if (!map || !active) return;
 
-    phaseRef.current = 'draw';
+    startRef.current = null;
+    rectRef.current = null;
+    setHasRect(false);
+    map.getContainer().style.cursor = 'crosshair';
 
-    map.pm.enableDraw('Polygon', {
-      pathOptions: { color: '#dc2626', weight: 2, fillColor: '#dc2626', fillOpacity: 0.2 },
-      tooltips: true,
-    });
-
-    const handleCreate = (e) => {
-      const layer = e.layer;
-      layerRef.current = layer;
-      phaseRef.current = 'adjust';
-
-      // Enable edit + rotate on the shape
-      layer.pm.enable({ allowSelfIntersection: false });
-      if (layer.pm.enableRotate) layer.pm.enableRotate();
-
-      map.pm.disableDraw('Polygon');
+    const onMouseDown = (e) => {
+      if (hasRect) return;
+      startRef.current = e.latlng;
+      map.dragging.disable();
     };
 
-    map.on('pm:create', handleCreate);
-    return () => {
-      map.off('pm:create', handleCreate);
-      map.pm.disableDraw('Polygon');
-      if (layerRef.current) {
-        map.removeLayer(layerRef.current);
-        layerRef.current = null;
+    const onMouseMove = (e) => {
+      if (!startRef.current) return;
+      const bounds = L.latLngBounds(startRef.current, e.latlng);
+      if (rectRef.current) {
+        rectRef.current.setBounds(bounds);
+      } else {
+        rectRef.current = L.rectangle(bounds, {
+          color: '#dc2626', weight: 2, fillColor: '#dc2626', fillOpacity: 0.2,
+        }).addTo(map);
       }
     };
-  }, [map, active]);
+
+    const onMouseUp = () => {
+      if (!startRef.current) return;
+      startRef.current = null;
+      map.dragging.enable();
+      if (rectRef.current) {
+        setHasRect(true);
+        // Enable editing so user can adjust corners
+        if (rectRef.current.pm) {
+          rectRef.current.pm.enable();
+          if (rectRef.current.pm.enableRotate) rectRef.current.pm.enableRotate();
+        }
+      }
+    };
+
+    map.on('mousedown', onMouseDown);
+    map.on('mousemove', onMouseMove);
+    map.on('mouseup', onMouseUp);
+
+    return () => {
+      map.off('mousedown', onMouseDown);
+      map.off('mousemove', onMouseMove);
+      map.off('mouseup', onMouseUp);
+      map.dragging.enable();
+      map.getContainer().style.cursor = '';
+      if (rectRef.current) {
+        map.removeLayer(rectRef.current);
+        rectRef.current = null;
+      }
+    };
+  }, [map, active]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleConfirm = () => {
-    const layer = layerRef.current;
+    const layer = rectRef.current;
     if (!layer) return;
 
     const layerLatLngs = layer.getLatLngs()[0];
 
-    // Find spots whose centers fall within the drawn polygon
     const ids = [];
     for (const feature of (spots?.features || [])) {
       if (!feature.geometry || feature.geometry.type !== 'Polygon') continue;
@@ -64,7 +88,8 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
     }
 
     map.removeLayer(layer);
-    layerRef.current = null;
+    rectRef.current = null;
+    setHasRect(false);
 
     if (ids.length > 0 && onMarkDeadZones) {
       onMarkDeadZones(ids);
@@ -73,11 +98,11 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
   };
 
   const handleCancel = () => {
-    if (layerRef.current) {
-      map.removeLayer(layerRef.current);
-      layerRef.current = null;
+    if (rectRef.current) {
+      map.removeLayer(rectRef.current);
+      rectRef.current = null;
     }
-    map.pm.disableDraw('Polygon');
+    setHasRect(false);
     if (onDone) onDone();
   };
 
@@ -107,28 +132,32 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
         boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
         pointerEvents: 'none',
       }}>
-        Click points to draw dead zone shape — double-click to finish
+        {hasRect ? 'Adjust shape, then confirm' : 'Click and drag to draw dead zone'}
       </div>
-      <button
-        onClick={handleConfirm}
-        style={{
-          padding: '6px 14px', background: '#dc2626', color: '#fff', border: 'none',
-          borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: 'pointer',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-        }}
-      >
-        Confirm
-      </button>
-      <button
-        onClick={handleCancel}
-        style={{
-          padding: '6px 14px', background: '#475569', color: '#fff', border: 'none',
-          borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: 'pointer',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-        }}
-      >
-        Cancel
-      </button>
+      {hasRect && (
+        <>
+          <button
+            onClick={handleConfirm}
+            style={{
+              padding: '6px 14px', background: '#dc2626', color: '#fff', border: 'none',
+              borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+            }}
+          >
+            Confirm
+          </button>
+          <button
+            onClick={handleCancel}
+            style={{
+              padding: '6px 14px', background: '#475569', color: '#fff', border: 'none',
+              borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+            }}
+          >
+            Cancel
+          </button>
+        </>
+      )}
     </div>
   );
 }
