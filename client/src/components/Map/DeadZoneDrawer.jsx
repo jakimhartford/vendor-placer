@@ -1,65 +1,86 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 
 export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone }) {
   const map = useMap();
-  const layerRef = useRef(null);
-  const [drawn, setDrawn] = useState(false);
+  const rectRef = useRef(null);
+  const startRef = useRef(null);
+  const drawingRef = useRef(false);
+  const [phase, setPhase] = useState('idle'); // 'idle' | 'drawing' | 'adjusting'
 
-  // Listen for pm:create once
-  useEffect(() => {
-    if (!map) return;
-
-    const handleCreate = (e) => {
-      if (e.shape !== 'Rectangle') return;
-      layerRef.current = e.layer;
-      // Enable drag, edit vertices, and rotation
-      e.layer.pm.enable({ allowSelfIntersection: false });
-      if (e.layer.pm.enableRotate) e.layer.pm.enableRotate();
-      e.layer.pm.enableLayerDrag();
-      setDrawn(true);
-    };
-
-    map.on('pm:create', handleCreate);
-    return () => {
-      map.off('pm:create', handleCreate);
-    };
+  const cleanup = useCallback(() => {
+    if (rectRef.current && map) {
+      map.removeLayer(rectRef.current);
+      rectRef.current = null;
+    }
+    startRef.current = null;
+    drawingRef.current = false;
+    setPhase('idle');
   }, [map]);
 
-  // Toggle draw mode
   useEffect(() => {
-    if (!map) return;
-
-    if (active && !drawn) {
-      map.pm.enableDraw('Rectangle', {
-        pathOptions: { color: '#dc2626', weight: 2, fillColor: '#dc2626', fillOpacity: 0.2 },
-      });
-    } else {
-      map.pm.disableDraw('Rectangle');
+    if (!map || !active) {
+      cleanup();
+      return;
     }
+
+    setPhase('drawing');
+    map.getContainer().style.cursor = 'crosshair';
+
+    const onMouseDown = (e) => {
+      if (phase === 'adjusting') return;
+      // Ignore clicks on UI elements
+      if (e.originalEvent?.target !== map.getContainer() &&
+          !map.getContainer().contains(e.originalEvent?.target)) return;
+
+      startRef.current = e.latlng;
+      drawingRef.current = true;
+      map.dragging.disable();
+    };
+
+    const onMouseMove = (e) => {
+      if (!drawingRef.current || !startRef.current) return;
+      const bounds = L.latLngBounds(startRef.current, e.latlng);
+      if (rectRef.current) {
+        rectRef.current.setBounds(bounds);
+      } else {
+        rectRef.current = L.rectangle(bounds, {
+          color: '#dc2626', weight: 2, fillColor: '#dc2626', fillOpacity: 0.25,
+          dashArray: '6,4',
+        }).addTo(map);
+      }
+    };
+
+    const onMouseUp = () => {
+      if (!drawingRef.current) return;
+      drawingRef.current = false;
+      map.dragging.enable();
+
+      if (rectRef.current) {
+        map.getContainer().style.cursor = '';
+        setPhase('adjusting');
+      }
+    };
+
+    map.on('mousedown', onMouseDown);
+    map.on('mousemove', onMouseMove);
+    map.on('mouseup', onMouseUp);
 
     return () => {
-      map.pm.disableDraw('Rectangle');
+      map.off('mousedown', onMouseDown);
+      map.off('mousemove', onMouseMove);
+      map.off('mouseup', onMouseUp);
+      map.dragging.enable();
+      map.getContainer().style.cursor = '';
     };
-  }, [map, active, drawn]);
-
-  // Clean up on deactivate
-  useEffect(() => {
-    if (!active) {
-      if (layerRef.current && map) {
-        map.removeLayer(layerRef.current);
-        layerRef.current = null;
-      }
-      setDrawn(false);
-    }
-  }, [active, map]);
+  }, [map, active]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleConfirm = () => {
-    const layer = layerRef.current;
-    if (!layer) return;
+    const rect = rectRef.current;
+    if (!rect) return;
 
-    const layerLatLngs = layer.getLatLngs()[0];
+    const bounds = rect.getBounds();
 
     const ids = [];
     for (const feature of (spots?.features || [])) {
@@ -72,14 +93,13 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
         latSum += coords[i][1];
       }
       const center = L.latLng(latSum / n, lngSum / n);
-      if (isPointInPolygon(center, layerLatLngs)) {
+      if (bounds.contains(center)) {
         ids.push(feature.properties?.id);
       }
     }
 
-    map.removeLayer(layer);
-    layerRef.current = null;
-    setDrawn(false);
+    cleanup();
+    map.getContainer().style.cursor = '';
 
     if (ids.length > 0 && onMarkDeadZones) {
       onMarkDeadZones(ids);
@@ -88,11 +108,8 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
   };
 
   const handleCancel = () => {
-    if (layerRef.current) {
-      map.removeLayer(layerRef.current);
-      layerRef.current = null;
-    }
-    setDrawn(false);
+    cleanup();
+    map.getContainer().style.cursor = '';
     if (onDone) onDone();
   };
 
@@ -108,9 +125,11 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
         fontWeight: 600, fontSize: 13, boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
         pointerEvents: 'none',
       }}>
-        {drawn ? 'Adjust if needed, then confirm' : 'Click and drag to draw dead zone rectangle'}
+        {phase === 'adjusting'
+          ? `Confirm to mark spots as dead zones`
+          : 'Click and drag to draw dead zone rectangle'}
       </div>
-      {drawn && (
+      {phase === 'adjusting' && (
         <>
           <button onClick={handleConfirm} style={{
             padding: '6px 14px', background: '#dc2626', color: '#fff', border: 'none',
@@ -126,17 +145,4 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
       )}
     </div>
   );
-}
-
-function isPointInPolygon(point, polygon) {
-  const x = point.lat, y = point.lng;
-  let inside = false;
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const xi = polygon[i].lat, yi = polygon[i].lng;
-    const xj = polygon[j].lat, yj = polygon[j].lng;
-    const intersect = ((yi > y) !== (yj > y)) &&
-      (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-    if (intersect) inside = !inside;
-  }
-  return inside;
 }
