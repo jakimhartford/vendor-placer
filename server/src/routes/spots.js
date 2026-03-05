@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import crypto from 'crypto';
 import { getSession } from '../state/sessionStore.js';
+import { spotOverlapsDeadZone } from '../utils/geometry.js';
 
 export const spotRoutes = Router();
 
@@ -339,15 +340,17 @@ spotRoutes.post('/generate-grid', (req, res) => {
   }
 
   const session = getSession(req.user.id);
+  // Filter out spots that overlap dead zones
+  const filtered = features.filter((f) => !spotOverlapsDeadZone(f, session.deadZones));
   session.spotsGeoJSON = {
     type: 'FeatureCollection',
-    features,
+    features: filtered,
     metadata: session.spotsGeoJSON.metadata || {},
   };
 
   return res.json({
-    message: `Generated ${features.length} spots for area "${area}"`,
-    count: features.length,
+    message: `Generated ${filtered.length} spots for area "${area}" (${features.length - filtered.length} in dead zones)`,
+    count: filtered.length,
     spotsGeoJSON: session.spotsGeoJSON,
   });
 });
@@ -376,9 +379,13 @@ spotRoutes.post('/add-single', (req, res) => {
       col: existingCount + 1,
       area: 'manual',
       assignedVendorId: null,
-      ...(deadZone ? { deadZone: true } : {}),
     },
   };
+
+  // Reject if spot overlaps a dead zone
+  if (spotOverlapsDeadZone(feature, session.deadZones)) {
+    return res.status(400).json({ error: 'Spot overlaps a dead zone' });
+  }
 
   const existingFeatures = session.spotsGeoJSON?.features || [];
   session.spotsGeoJSON = {
@@ -498,16 +505,18 @@ spotRoutes.post('/generate-from-path', (req, res) => {
   const newFeatures = generateSpotsFromPath(path, { spotSizeFt, spacingFt, label });
 
   const session = getSession(req.user.id);
+  // Filter out spots that overlap dead zones
+  const filtered = newFeatures.filter((f) => !spotOverlapsDeadZone(f, session.deadZones));
   const existingFeatures = session.spotsGeoJSON?.features || [];
   session.spotsGeoJSON = {
     type: 'FeatureCollection',
-    features: [...existingFeatures, ...newFeatures],
+    features: [...existingFeatures, ...filtered],
     metadata: session.spotsGeoJSON.metadata || {},
   };
 
   return res.json({
-    message: `Generated ${newFeatures.length} spots along path (total: ${session.spotsGeoJSON.features.length})`,
-    count: newFeatures.length,
+    message: `Generated ${filtered.length} spots along path (${newFeatures.length - filtered.length} in dead zones, total: ${session.spotsGeoJSON.features.length})`,
+    count: filtered.length,
     totalCount: session.spotsGeoJSON.features.length,
     spotsGeoJSON: session.spotsGeoJSON,
   });

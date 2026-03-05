@@ -24,6 +24,10 @@ const projectSchema = new mongoose.Schema({
     type: Object,
     default: null,
   },
+  deadZones: {
+    type: mongoose.Schema.Types.Mixed,
+    default: [],
+  },
   paths: {
     type: mongoose.Schema.Types.Mixed,
     default: [],

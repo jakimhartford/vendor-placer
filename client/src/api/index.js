@@ -137,4 +137,22 @@ export function deleteProject(id) {
   return api.delete(`/api/projects/${id}`).then((res) => res.data);
 }
 
+// ---------- Dead Zones ----------
+
+export function fetchDeadZones() {
+  return api.get('/api/dead-zones').then((res) => res.data);
+}
+
+export function createDeadZone(polygon) {
+  return api.post('/api/dead-zones', { polygon }).then((res) => res.data);
+}
+
+export function deleteDeadZone(id) {
+  return api.delete(`/api/dead-zones/${id}`).then((res) => res.data);
+}
+
+export function clearDeadZones() {
+  return api.delete('/api/dead-zones').then((res) => res.data);
+}
+
 export default api;

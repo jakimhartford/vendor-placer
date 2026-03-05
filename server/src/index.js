@@ -8,6 +8,7 @@ import { vendorRoutes } from './routes/vendors.js';
 import { spotRoutes } from './routes/spots.js';
 import { placementRoutes } from './routes/placements.js';
 import { projectRoutes } from './routes/projects.js';
+import { deadZoneRoutes } from './routes/deadZones.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -24,6 +25,7 @@ app.use('/api/vendors', requireAuth, vendorRoutes);
 app.use('/api/spots', requireAuth, spotRoutes);
 app.use('/api/placements', requireAuth, placementRoutes);
 app.use('/api/projects', requireAuth, projectRoutes);
+app.use('/api/dead-zones', requireAuth, deadZoneRoutes);
 
 async function start() {
   await connectDB();

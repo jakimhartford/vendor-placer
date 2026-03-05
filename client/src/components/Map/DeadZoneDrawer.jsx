@@ -6,7 +6,7 @@ const DEFAULT_WIDTH_FT = 20;
 const FT_TO_DEG_LAT = 0.0000027;
 const FT_TO_DEG_LNG = 0.0000034;
 
-export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone }) {
+export default function DeadZoneDrawer({ active, onAddDeadZone, onDone }) {
   const map = useMap();
   const markersRef = useRef([]);
   const previewRef = useRef(null);
@@ -15,7 +15,6 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
   const widthRef = useRef(DEFAULT_WIDTH_FT);
   const [phase, setPhase] = useState('idle');
   const [widthFt, setWidthFt] = useState(DEFAULT_WIDTH_FT);
-  const [matchCount, setMatchCount] = useState(0);
 
   const buildRotatedRect = useCallback((p1, p2, wFt) => {
     const dx = p2.lng - p1.lng;
@@ -36,25 +35,6 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
     ];
   }, []);
 
-  const countSpots = useCallback((corners) => {
-    if (!corners) return 0;
-    const polyLatLngs = corners.map(([lat, lng]) => L.latLng(lat, lng));
-    let count = 0;
-    for (const feature of (spots?.features || [])) {
-      if (!feature.geometry || feature.geometry.type !== 'Polygon') continue;
-      const coords = feature.geometry.coordinates[0];
-      const n = coords.length - 1;
-      let latSum = 0, lngSum = 0;
-      for (let i = 0; i < n; i++) {
-        lngSum += coords[i][0];
-        latSum += coords[i][1];
-      }
-      const center = L.latLng(latSum / n, lngSum / n);
-      if (isPointInPolygon(center, polyLatLngs)) count++;
-    }
-    return count;
-  }, [spots]);
-
   const updatePreview = useCallback(() => {
     if (pointsRef.current.length < 2) return;
     const [p1, p2] = pointsRef.current;
@@ -73,9 +53,7 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
     if (lineRef.current) {
       lineRef.current.setLatLngs(pointsRef.current);
     }
-
-    setMatchCount(countSpots(corners));
-  }, [map, buildRotatedRect, countSpots]);
+  }, [map, buildRotatedRect]);
 
   const clearAll = useCallback(() => {
     markersRef.current.forEach((m) => map?.removeLayer(m));
@@ -103,10 +81,9 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
       const latlng = e.latlng;
       pointsRef.current.push(latlng);
 
-      // Draggable marker
       const marker = L.circleMarker(latlng, {
         radius: 7, color: '#dc2626', fillColor: '#fff', fillOpacity: 1, weight: 2,
-        interactive: true, draggable: false, // circleMarker can't drag, but we handle it below
+        interactive: true,
       }).addTo(map);
       markersRef.current.push(marker);
 
@@ -120,7 +97,7 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
         map.getContainer().style.cursor = '';
         setPhase('confirm');
 
-        // Now replace circle markers with draggable real markers
+        // Replace circle markers with draggable markers
         markersRef.current.forEach((m) => map.removeLayer(m));
         markersRef.current = [];
 
@@ -166,29 +143,12 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
     const corners = buildRotatedRect(p1, p2, widthRef.current);
     if (!corners) return;
 
-    const polyLatLngs = corners.map(([lat, lng]) => L.latLng(lat, lng));
-
-    const ids = [];
-    for (const feature of (spots?.features || [])) {
-      if (!feature.geometry || feature.geometry.type !== 'Polygon') continue;
-      const coords = feature.geometry.coordinates[0];
-      const n = coords.length - 1;
-      let latSum = 0, lngSum = 0;
-      for (let i = 0; i < n; i++) {
-        lngSum += coords[i][0];
-        latSum += coords[i][1];
-      }
-      const center = L.latLng(latSum / n, lngSum / n);
-      if (isPointInPolygon(center, polyLatLngs)) {
-        ids.push(feature.properties?.id);
-      }
-    }
-
     clearAll();
     setPhase('idle');
 
-    if (ids.length > 0 && onMarkDeadZones) {
-      await onMarkDeadZones(ids);
+    // Send polygon coordinates to server — server handles overlap detection & spot removal
+    if (onAddDeadZone) {
+      await onAddDeadZone(corners);
     }
     if (onDone) onDone();
   };
@@ -205,7 +165,7 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
   const instructions = {
     first: 'Click the START of the dead zone',
     second: 'Click the END of the dead zone',
-    confirm: `${matchCount} spot${matchCount !== 1 ? 's' : ''} selected — drag markers to adjust`,
+    confirm: 'Drag markers to adjust, then confirm',
   };
 
   return (
@@ -259,17 +219,4 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
       )}
     </div>
   );
-}
-
-function isPointInPolygon(point, polygon) {
-  const x = point.lat, y = point.lng;
-  let inside = false;
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const xi = polygon[i].lat, yi = polygon[i].lng;
-    const xj = polygon[j].lat, yj = polygon[j].lng;
-    const intersect = ((yi > y) !== (yj > y)) &&
-      (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-    if (intersect) inside = !inside;
-  }
-  return inside;
 }

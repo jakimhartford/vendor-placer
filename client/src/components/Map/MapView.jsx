@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapContainer, TileLayer } from 'react-leaflet';
+import { MapContainer, TileLayer, Polygon } from 'react-leaflet';
 import { MAP_CENTER, DEFAULT_ZOOM, GOOGLE_TILE_STYLES } from '../../utils/constants.js';
 import SpotLayer, { featureCenter } from './SpotLayer.jsx';
 import DrawToolbar from './DrawToolbar.jsx';
@@ -13,7 +13,7 @@ export default function MapView({
   spots, vendors, assignments, selectedSpotId, paths,
   onPathDrawn, streetDrawMode, spotPlaceMode, onSpotPlaced,
   onSpotClick, editingSpot, onSpotSave, onSpotDelete, onSpotEditClose,
-  movingVendor, selectedSpotIds, deadZoneDrawMode, onMarkDeadZones, onDeadZoneDrawDone,
+  movingVendor, selectedSpotIds, deadZones, deadZoneDrawMode, onAddDeadZone, onDeadZoneDrawDone,
   onStartMove,
 }) {
   const [mapStyle, setMapStyle] = useState('streets');
@@ -60,6 +60,20 @@ export default function MapView({
         ))}
       </div>
       <FitBounds spots={spots} />
+      {/* Render dead zone polygons */}
+      {(deadZones || []).map((dz) => (
+        <Polygon
+          key={dz.id}
+          positions={dz.polygon}
+          pathOptions={{
+            color: '#dc2626',
+            weight: 2,
+            fillColor: '#dc2626',
+            fillOpacity: 0.3,
+            dashArray: '8,4',
+          }}
+        />
+      ))}
       <SpotLayer
         spots={spots}
         vendors={vendors}
@@ -77,8 +91,7 @@ export default function MapView({
       <SpotPlacer active={spotPlaceMode} onSpotPlaced={onSpotPlaced} />
       <DeadZoneDrawer
         active={deadZoneDrawMode}
-        spots={spots}
-        onMarkDeadZones={onMarkDeadZones}
+        onAddDeadZone={onAddDeadZone}
         onDone={onDeadZoneDrawDone}
       />
       <LocationSearch />

@@ -15,8 +15,6 @@ export default function PlacementControls({
   onToggleSpotPlace,
   vendors,
   placements,
-  deadZonePlaceMode,
-  onToggleDeadZonePlace,
   deadZoneDrawMode,
   onToggleDeadZoneDraw,
   selectedSpotIds,
@@ -128,24 +126,10 @@ export default function PlacementControls({
         <button
           className="btn"
           disabled={loading}
-          onClick={onToggleDeadZonePlace}
-          style={{
-            flex: 1,
-            background: deadZonePlaceMode ? '#991b1b' : '#dc2626',
-            color: '#fff',
-            fontWeight: 600,
-            fontSize: 11,
-          }}
-        >
-          {deadZonePlaceMode ? 'Stop Placing' : 'Place Dead Zone'}
-        </button>
-        <button
-          className="btn"
-          disabled={loading}
           onClick={onToggleDeadZoneDraw}
           style={{
             flex: 1,
-            background: deadZoneDrawMode ? '#991b1b' : '#b91c1c',
+            background: deadZoneDrawMode ? '#991b1b' : '#dc2626',
             color: '#fff',
             fontWeight: 600,
             fontSize: 11,

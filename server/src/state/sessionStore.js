@@ -7,6 +7,7 @@ export function getSession(userId) {
       vendors: [],
       spotsGeoJSON: { type: 'FeatureCollection', features: [], metadata: {} },
       lastPlacement: null,
+      deadZones: [], // array of { id, polygon: [[lat, lng], ...] }
     });
   }
   return sessions.get(userId);

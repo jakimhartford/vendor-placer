@@ -3,6 +3,7 @@ import useVendors from './hooks/useVendors.js';
 import useSpots from './hooks/useSpots.js';
 import usePlacements from './hooks/usePlacements.js';
 import useProjects from './hooks/useProjects.js';
+import useDeadZones from './hooks/useDeadZones.js';
 import MapView from './components/Map/MapView.jsx';
 import CsvUploader from './components/Vendors/CsvUploader.jsx';
 import VendorTable from './components/Vendors/VendorTable.jsx';
@@ -57,6 +58,15 @@ export default function App() {
     removeProject,
   } = useProjects();
 
+  const {
+    deadZones,
+    loadDeadZones,
+    addDeadZone,
+    removeDeadZone,
+    clearAll: clearDeadZones,
+    setDeadZones,
+  } = useDeadZones();
+
   // Street path state
   const [paths, setPaths] = useState([]);
   const [streetDrawMode, setStreetDrawMode] = useState(false);
@@ -65,8 +75,7 @@ export default function App() {
   // Spot place mode (click to place individual spots)
   const [spotPlaceMode, setSpotPlaceMode] = useState(false);
 
-  // Dead zone modes
-  const [deadZonePlaceMode, setDeadZonePlaceMode] = useState(false);
+  // Dead zone draw mode
   const [deadZoneDrawMode, setDeadZoneDrawMode] = useState(false);
 
   // Move vendor state
@@ -87,7 +96,8 @@ export default function App() {
     loadVendors();
     loadSpots();
     loadProjects();
-  }, [loadVendors, loadSpots, loadProjects]);
+    loadDeadZones();
+  }, [loadVendors, loadSpots, loadProjects, loadDeadZones]);
 
   // Project handlers
   const handleLoadProject = useCallback(async (id) => {
@@ -96,6 +106,7 @@ export default function App() {
       // Refresh all in-memory state from server (which was restored by the GET)
       await loadVendors();
       await loadSpots();
+      await loadDeadZones();
       // Restore client-only state
       setPaths(data.paths || []);
       setPathLabelIdx(data.paths?.length || 0);
@@ -104,7 +115,7 @@ export default function App() {
         updateAssignments(Array.isArray(raw) ? Object.fromEntries(raw.map((a) => [a.spotId, a.vendorId])) : raw);
       }
     }
-  }, [loadProject, loadVendors, loadSpots, updateAssignments]);
+  }, [loadProject, loadVendors, loadSpots, loadDeadZones, updateAssignments]);
 
   const handleSaveNewProject = useCallback(async (name) => {
     await saveNewProject({ name, paths });
@@ -156,30 +167,16 @@ export default function App() {
   };
 
   const handleSpotPlaced = useCallback(async ({ lat, lng }) => {
-    await addSingleSpot({ lat, lng, deadZone: deadZonePlaceMode || undefined });
-  }, [addSingleSpot, deadZonePlaceMode]);
+    await addSingleSpot({ lat, lng });
+  }, [addSingleSpot]);
 
   const handleToggleSpotPlace = () => {
     if (spotPlaceMode) {
       setSpotPlaceMode(false);
     } else {
       setStreetDrawMode(false);
-      setDeadZonePlaceMode(false);
       setDeadZoneDrawMode(false);
       setSpotPlaceMode(true);
-    }
-  };
-
-  const handleToggleDeadZonePlace = () => {
-    if (deadZonePlaceMode) {
-      setDeadZonePlaceMode(false);
-      setSpotPlaceMode(false);
-    } else {
-      setStreetDrawMode(false);
-      setSpotPlaceMode(false);
-      setDeadZoneDrawMode(false);
-      setDeadZonePlaceMode(true);
-      // Reuse SpotPlacer — active when deadZonePlaceMode is true
     }
   };
 
@@ -189,14 +186,17 @@ export default function App() {
     } else {
       setStreetDrawMode(false);
       setSpotPlaceMode(false);
-      setDeadZonePlaceMode(false);
       setDeadZoneDrawMode(true);
     }
   };
 
-  const handleMarkDeadZones = useCallback(async (ids) => {
-    await updateSpotsBatch(ids, { deadZone: true });
-  }, [updateSpotsBatch]);
+  const handleAddDeadZone = useCallback(async (polygon) => {
+    const result = await addDeadZone(polygon);
+    if (result?.spotsGeoJSON) {
+      // Update spots since overlapping ones were removed
+      setSpotsLocal(result.spotsGeoJSON);
+    }
+  }, [addDeadZone, setSpotsLocal]);
 
   const handleDeadZoneDrawDone = useCallback(() => {
     setDeadZoneDrawMode(false);
@@ -305,7 +305,6 @@ export default function App() {
       if (e.key === 'Escape') {
         setMovingVendor(null);
         setSelectedSpotIds(new Set());
-        setDeadZonePlaceMode(false);
         setDeadZoneDrawMode(false);
       }
     };
@@ -383,8 +382,6 @@ export default function App() {
             onToggleSpotPlace={handleToggleSpotPlace}
             vendors={vendors}
             placements={placements}
-            deadZonePlaceMode={deadZonePlaceMode}
-            onToggleDeadZonePlace={handleToggleDeadZonePlace}
             deadZoneDrawMode={deadZoneDrawMode}
             onToggleDeadZoneDraw={handleToggleDeadZoneDraw}
             selectedSpotIds={selectedSpotIds}
@@ -428,7 +425,7 @@ export default function App() {
           paths={paths}
           onPathDrawn={handlePathDrawn}
           streetDrawMode={streetDrawMode}
-          spotPlaceMode={spotPlaceMode || deadZonePlaceMode}
+          spotPlaceMode={spotPlaceMode}
           onSpotPlaced={handleSpotPlaced}
           onSpotClick={handleSpotClick}
           editingSpot={editingSpot}
@@ -437,8 +434,9 @@ export default function App() {
           onSpotEditClose={handleSpotEditClose}
           movingVendor={movingVendor}
           selectedSpotIds={selectedSpotIds}
+          deadZones={deadZones}
           deadZoneDrawMode={deadZoneDrawMode}
-          onMarkDeadZones={handleMarkDeadZones}
+          onAddDeadZone={handleAddDeadZone}
           onDeadZoneDrawDone={handleDeadZoneDrawDone}
           onStartMove={handleStartMove}
         />

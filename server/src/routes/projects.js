@@ -3,6 +3,7 @@ import Project from '../models/Project.js';
 import { getSpots, setSpots } from './spots.js';
 import { getVendors, setVendors } from './vendors.js';
 import { getPlacements, setPlacements } from './placements.js';
+import { getSession } from '../state/sessionStore.js';
 
 export const projectRoutes = Router();
 
@@ -37,9 +38,11 @@ projectRoutes.get('/:id', async (req, res) => {
     const userId = req.user.id;
 
     // Restore in-memory state for this user
+    const session = getSession(userId);
     if (project.spotsGeoJSON) setSpots(userId, project.spotsGeoJSON);
     if (project.vendors) setVendors(userId, project.vendors);
     if (project.placements) setPlacements(userId, project.placements);
+    session.deadZones = project.deadZones || [];
 
     return res.json({
       id: project._id,
@@ -50,6 +53,7 @@ projectRoutes.get('/:id', async (req, res) => {
       vendors: project.vendors,
       placements: project.placements,
       paths: project.paths,
+      deadZones: project.deadZones || [],
       mapCenter: project.mapCenter,
       zoom: project.zoom,
     });
@@ -64,12 +68,14 @@ projectRoutes.post('/', async (req, res) => {
     const userId = req.user.id;
     const { name, mapCenter, zoom, paths } = req.body;
 
+    const session = getSession(userId);
     const project = await Project.create({
       owner: userId,
       name: name || 'Untitled Project',
       spotsGeoJSON: getSpots(userId),
       vendors: getVendors(userId),
       placements: getPlacements(userId),
+      deadZones: session.deadZones,
       paths: paths || [],
       mapCenter: mapCenter || null,
       zoom: zoom || null,
@@ -97,12 +103,14 @@ projectRoutes.put('/:id', async (req, res) => {
 
     const { name, mapCenter, zoom, paths } = req.body;
 
+    const session = getSession(userId);
     project.name = name || project.name;
     project.mapCenter = mapCenter ?? project.mapCenter;
     project.zoom = zoom ?? project.zoom;
     project.spotsGeoJSON = getSpots(userId);
     project.vendors = getVendors(userId);
     project.placements = getPlacements(userId);
+    project.deadZones = session.deadZones;
     project.paths = paths ?? project.paths;
 
     await project.save();
