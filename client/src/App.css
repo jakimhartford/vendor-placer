@@ -24,12 +24,14 @@ body,
   display: flex;
   height: 100vh;
   width: 100vw;
+  overflow: hidden;
 }
 
 /* ---------- Sidebar ---------- */
 .sidebar {
   width: 480px;
   min-width: 480px;
+  flex-shrink: 0;
   background: #1a1a2e;
   color: #e2e8f0;
   display: flex;
@@ -72,7 +74,9 @@ body,
 /* ---------- Map ---------- */
 .map-area {
   flex: 1;
+  min-width: 0;
   position: relative;
+  overflow: hidden;
 }
 
 .map-area .leaflet-container {

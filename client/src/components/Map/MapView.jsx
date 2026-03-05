@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { MapContainer, TileLayer, Polygon, Popup } from 'react-leaflet';
+import React, { useState, useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Polygon, Popup, useMap } from 'react-leaflet';
 import { MAP_CENTER, DEFAULT_ZOOM, GOOGLE_TILE_STYLES } from '../../utils/constants.js';
 import SpotLayer, { featureCenter } from './SpotLayer.jsx';
 import DrawToolbar from './DrawToolbar.jsx';
@@ -14,6 +14,22 @@ import AmenityPlacer from './AmenityPlacer.jsx';
 import AccessPointLayer from './AccessPointLayer.jsx';
 import MapZoneLayer from './MapZoneLayer.jsx';
 import MapZoneDrawer from './MapZoneDrawer.jsx';
+
+function MapSizeInvalidator() {
+  const map = useMap();
+  useEffect(() => {
+    // Invalidate immediately + after layout settles so Leaflet knows its true size
+    map.invalidateSize();
+    const timer = setTimeout(() => map.invalidateSize(), 200);
+    const onResize = () => map.invalidateSize();
+    window.addEventListener('resize', onResize);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [map]);
+  return null;
+}
 
 export default function MapView({
   spots, vendors, assignments, selectedSpotId, paths,
@@ -47,6 +63,7 @@ export default function MapView({
       zoomControl={true}
       data-tour="map-area"
     >
+      <MapSizeInvalidator />
       <TileLayer
         key={mapStyle}
         attribution='&copy; Google Maps'
