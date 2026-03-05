@@ -94,10 +94,10 @@ export default function useSpots() {
     }
   }, []);
 
-  const addSingleSpot = useCallback(async ({ lng, lat, label }) => {
+  const addSingleSpot = useCallback(async ({ lng, lat, label, deadZone }) => {
     setLoading(true);
     try {
-      const data = await apiAddSingleSpot({ lng, lat, label });
+      const data = await apiAddSingleSpot({ lng, lat, label, deadZone });
       if (data.spotsGeoJSON && data.spotsGeoJSON.type === 'FeatureCollection') {
         setSpots(data.spotsGeoJSON);
       } else {
