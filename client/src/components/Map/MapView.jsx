@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapContainer, TileLayer, Polygon } from 'react-leaflet';
+import { MapContainer, TileLayer, Polygon, Popup } from 'react-leaflet';
 import { MAP_CENTER, DEFAULT_ZOOM, GOOGLE_TILE_STYLES } from '../../utils/constants.js';
 import SpotLayer, { featureCenter } from './SpotLayer.jsx';
 import DrawToolbar from './DrawToolbar.jsx';
@@ -14,7 +14,7 @@ export default function MapView({
   onPathDrawn, streetDrawMode, spotPlaceMode, onSpotPlaced,
   onSpotClick, editingSpot, onSpotSave, onSpotDelete, onSpotEditClose,
   movingVendor, selectedSpotIds, deadZones, deadZoneDrawMode, onAddDeadZone, onDeadZoneDrawDone,
-  onStartMove,
+  onRemoveDeadZone, onStartMove,
 }) {
   const [mapStyle, setMapStyle] = useState('streets');
 
@@ -60,7 +60,7 @@ export default function MapView({
         ))}
       </div>
       <FitBounds spots={spots} />
-      {/* Render dead zone polygons */}
+      {/* Render dead zone polygons — click to delete */}
       {(deadZones || []).map((dz) => (
         <Polygon
           key={dz.id}
@@ -72,7 +72,23 @@ export default function MapView({
             fillOpacity: 0.3,
             dashArray: '8,4',
           }}
-        />
+        >
+          <Popup>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Dead Zone</div>
+              <button
+                onClick={() => onRemoveDeadZone(dz.id)}
+                style={{
+                  padding: '4px 12px', background: '#dc2626', color: '#fff',
+                  border: 'none', borderRadius: 4, fontWeight: 600, fontSize: 12,
+                  cursor: 'pointer',
+                }}
+              >
+                Remove
+              </button>
+            </div>
+          </Popup>
+        </Polygon>
       ))}
       <SpotLayer
         spots={spots}

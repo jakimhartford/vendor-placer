@@ -17,6 +17,8 @@ export default function PlacementControls({
   placements,
   deadZoneDrawMode,
   onToggleDeadZoneDraw,
+  deadZoneCount,
+  onClearDeadZones,
   selectedSpotIds,
   onDeleteSelected,
 }) {
@@ -137,6 +139,21 @@ export default function PlacementControls({
         >
           {deadZoneDrawMode ? 'Cancel Draw' : 'Draw Dead Zone'}
         </button>
+        {deadZoneCount > 0 && (
+          <button
+            className="btn"
+            disabled={loading}
+            onClick={onClearDeadZones}
+            style={{
+              background: '#7f1d1d',
+              color: '#fff',
+              fontWeight: 600,
+              fontSize: 11,
+            }}
+          >
+            Clear ({deadZoneCount})
+          </button>
+        )}
       </div>
 
       {/* Multi-select delete */}

@@ -384,6 +384,8 @@ export default function App() {
             placements={placements}
             deadZoneDrawMode={deadZoneDrawMode}
             onToggleDeadZoneDraw={handleToggleDeadZoneDraw}
+            deadZoneCount={deadZones?.length || 0}
+            onClearDeadZones={clearDeadZones}
             selectedSpotIds={selectedSpotIds}
             onDeleteSelected={handleDeleteSelected}
           />
@@ -437,6 +439,7 @@ export default function App() {
           deadZones={deadZones}
           deadZoneDrawMode={deadZoneDrawMode}
           onAddDeadZone={handleAddDeadZone}
+          onRemoveDeadZone={removeDeadZone}
           onDeadZoneDrawDone={handleDeadZoneDrawDone}
           onStartMove={handleStartMove}
         />
