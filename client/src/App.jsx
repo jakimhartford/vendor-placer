@@ -15,7 +15,9 @@ import SpotTable from './components/Spots/SpotTable.jsx';
 import PricingConfig from './components/Revenue/PricingConfig.jsx';
 import RevenueSummary from './components/Revenue/RevenueSummary.jsx';
 import useAmenities from './hooks/useAmenities.js';
+import useMapZones from './hooks/useMapZones.js';
 import useLogistics from './hooks/useLogistics.js';
+import { ELEMENT_CATALOG } from './components/Placement/elementCatalog.js';
 import LogisticsPanel from './components/Logistics/LogisticsPanel.jsx';
 import ExportPdfButton from './components/Export/ExportPdfButton.jsx';
 import WalkthroughTutorial, { STORAGE_KEY as TUTORIAL_KEY } from './components/Tutorial/WalkthroughTutorial.jsx';
@@ -91,6 +93,15 @@ export default function App() {
   } = useAmenities();
 
   const {
+    mapZones,
+    loadMapZones,
+    addMapZone,
+    removeMapZone,
+    clearAll: clearMapZones,
+    setMapZones,
+  } = useMapZones();
+
+  const {
     accessPoints,
     timeWindows,
     loadLogistics,
@@ -121,7 +132,8 @@ export default function App() {
     assignments: placements.assignments ? { ...placements.assignments } : {},
     deadZones: deadZones ? JSON.parse(JSON.stringify(deadZones)) : [],
     paths: JSON.parse(JSON.stringify(paths)),
-  }), [spots, placements.assignments, deadZones, paths]);
+    mapZones: mapZones ? JSON.parse(JSON.stringify(mapZones)) : [],
+  }), [spots, placements.assignments, deadZones, paths, mapZones]);
 
   const restoreSnapshot = useCallback((snapshot) => {
     if (snapshot.spots) {
@@ -130,11 +142,12 @@ export default function App() {
     }
     if (snapshot.assignments) updateAssignments(snapshot.assignments);
     if (snapshot.deadZones) setDeadZones(snapshot.deadZones);
+    if (snapshot.mapZones) setMapZones(snapshot.mapZones);
     if (snapshot.paths) {
       setPaths(snapshot.paths);
       setPathLabelIdx(snapshot.paths.length);
     }
-  }, [setSpotsLocal, updateAssignments, setDeadZones]);
+  }, [setSpotsLocal, updateAssignments, setDeadZones, setMapZones]);
 
   const handleUndo = useCallback(() => {
     const current = captureSnapshot();
@@ -170,16 +183,19 @@ export default function App() {
   // Spot place mode (click to place individual spots)
   const [spotPlaceMode, setSpotPlaceMode] = useState(false);
 
-  // Dead zone draw mode
-  const [deadZoneDrawMode, setDeadZoneDrawMode] = useState(false);
-
-  // Amenity state
-  const [amenityPlaceMode, setAmenityPlaceMode] = useState(false);
-  const [amenityType, setAmenityType] = useState('power');
+  // Element palette state (replaces individual mode states)
+  const [activeElement, setActiveElement] = useState(null);
   const [amenitiesVisible, setAmenitiesVisible] = useState(true);
+  const [mapZonesVisible, setMapZonesVisible] = useState(true);
 
-  // Access point state
-  const [accessPointPlaceMode, setAccessPointPlaceMode] = useState(false);
+  // Derive legacy booleans from activeElement so MapView/placers/drawers need zero changes
+  const activeElementDef = activeElement ? ELEMENT_CATALOG.find((e) => e.id === activeElement) : null;
+  const deadZoneDrawMode = activeElement === 'dead_zone';
+  const amenityPlaceMode = !!activeElementDef?.amenityType;
+  const amenityType = activeElementDef?.amenityType || 'power';
+  const accessPointPlaceMode = activeElement === 'access_point';
+  const mapZoneDrawMode = !!activeElementDef?.zoneType;
+  const mapZoneType = activeElementDef?.zoneType || 'barricade';
 
   // Move vendor state
   const [movingVendor, setMovingVendor] = useState(null);
@@ -199,8 +215,9 @@ export default function App() {
     loadProjects();
     loadDeadZones();
     loadAmenities();
+    loadMapZones();
     loadLogistics();
-  }, [loadVendors, loadSpots, loadProjects, loadDeadZones, loadAmenities, loadLogistics]);
+  }, [loadVendors, loadSpots, loadProjects, loadDeadZones, loadAmenities, loadMapZones, loadLogistics]);
 
   // Project handlers
   const handleLoadProject = useCallback(async (id) => {
@@ -210,6 +227,7 @@ export default function App() {
       await loadSpots();
       await loadDeadZones();
       await loadAmenities();
+      await loadMapZones();
       await loadLogistics();
       setPaths(data.paths || []);
       setPathLabelIdx(data.paths?.length || 0);
@@ -222,7 +240,7 @@ export default function App() {
         updateAssignments(Array.isArray(raw) ? Object.fromEntries(raw.map((a) => [a.spotId, a.vendorId])) : raw);
       }
     }
-  }, [loadProject, loadVendors, loadSpots, loadDeadZones, loadAmenities, loadLogistics, updateAssignments]);
+  }, [loadProject, loadVendors, loadSpots, loadDeadZones, loadAmenities, loadMapZones, loadLogistics, updateAssignments]);
 
   const handleSaveNewProject = useCallback(async (name) => {
     const settings = { ...projectSettings, pricingConfig };
@@ -272,6 +290,8 @@ export default function App() {
     } else {
       setStreetParams(params);
       setStreetDrawMode(true);
+      setSpotPlaceMode(false);
+      setActiveElement(null);
     }
   };
 
@@ -309,20 +329,19 @@ export default function App() {
       setSpotPlaceMode(false);
     } else {
       setStreetDrawMode(false);
-      setDeadZoneDrawMode(false);
+      setActiveElement(null);
       setSpotPlaceMode(true);
     }
   };
 
-  const handleToggleDeadZoneDraw = () => {
-    if (deadZoneDrawMode) {
-      setDeadZoneDrawMode(false);
-    } else {
+  // Element palette selection handler
+  const handleSelectElement = useCallback((elementId) => {
+    if (elementId) {
       setStreetDrawMode(false);
       setSpotPlaceMode(false);
-      setDeadZoneDrawMode(true);
     }
-  };
+    setActiveElement(elementId);
+  }, []);
 
   const handleAddDeadZone = useCallback(async (polygon) => {
     pushState(captureSnapshot());
@@ -333,7 +352,7 @@ export default function App() {
   }, [addDeadZone, setSpotsLocal, pushState, captureSnapshot]);
 
   const handleDeadZoneDrawDone = useCallback(() => {
-    setDeadZoneDrawMode(false);
+    setActiveElement(null);
   }, []);
 
   const handleUpdateDeadZone = useCallback(async (id, data) => {
@@ -343,6 +362,15 @@ export default function App() {
       setSpotsLocal(result.spotsGeoJSON);
     }
   }, [updateDeadZone, setSpotsLocal, pushState, captureSnapshot]);
+
+  const handleAddMapZone = useCallback(async (zoneData) => {
+    pushState(captureSnapshot());
+    await addMapZone(zoneData);
+  }, [addMapZone, pushState, captureSnapshot]);
+
+  const handleMapZoneDrawDone = useCallback(() => {
+    setActiveElement(null);
+  }, []);
 
   const handleClearGrid = async () => {
     pushState(captureSnapshot());
@@ -452,7 +480,7 @@ export default function App() {
       if (e.key === 'Escape') {
         setMovingVendor(null);
         setSelectedSpotIds(new Set());
-        setDeadZoneDrawMode(false);
+        setActiveElement(null);
       }
       // Undo: Cmd/Ctrl+Z (without Shift)
       if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
@@ -543,10 +571,6 @@ export default function App() {
             onToggleSpotPlace={handleToggleSpotPlace}
             vendors={vendors}
             placements={placements}
-            deadZoneDrawMode={deadZoneDrawMode}
-            onToggleDeadZoneDraw={handleToggleDeadZoneDraw}
-            deadZoneCount={deadZones?.length || 0}
-            onClearDeadZones={clearDeadZones}
             selectedSpotIds={selectedSpotIds}
             onDeleteSelected={handleDeleteSelected}
             projectSettings={projectSettings}
@@ -555,29 +579,19 @@ export default function App() {
             canRedo={canRedo}
             onUndo={handleUndo}
             onRedo={handleRedo}
-            amenityPlaceMode={amenityPlaceMode}
-            onToggleAmenityPlace={() => {
-              if (amenityPlaceMode) setAmenityPlaceMode(false);
-              else {
-                setStreetDrawMode(false); setSpotPlaceMode(false); setDeadZoneDrawMode(false); setAccessPointPlaceMode(false);
-                setAmenityPlaceMode(true);
-              }
-            }}
-            amenityType={amenityType}
-            onAmenityTypeChange={setAmenityType}
+            activeElement={activeElement}
+            onSelectElement={handleSelectElement}
             amenitiesVisible={amenitiesVisible}
             onToggleAmenitiesVisible={() => setAmenitiesVisible((v) => !v)}
             amenityCount={amenities.length}
             onClearAmenities={clearAmenities}
-            accessPointPlaceMode={accessPointPlaceMode}
-            onToggleAccessPointPlace={() => {
-              if (accessPointPlaceMode) setAccessPointPlaceMode(false);
-              else {
-                setStreetDrawMode(false); setSpotPlaceMode(false); setDeadZoneDrawMode(false); setAmenityPlaceMode(false);
-                setAccessPointPlaceMode(true);
-              }
-            }}
             accessPointCount={accessPoints.length}
+            mapZonesVisible={mapZonesVisible}
+            onToggleMapZonesVisible={() => setMapZonesVisible((v) => !v)}
+            mapZoneCount={mapZones.length}
+            onClearMapZones={clearMapZones}
+            deadZoneCount={deadZones?.length || 0}
+            onClearDeadZones={clearDeadZones}
           />
         </div>
 
@@ -675,8 +689,15 @@ export default function App() {
           amenitiesVisible={amenitiesVisible}
           accessPoints={accessPoints}
           accessPointPlaceMode={accessPointPlaceMode}
-          onPlaceAccessPoint={async (data) => { await addAccessPoint(data); setAccessPointPlaceMode(false); }}
+          onPlaceAccessPoint={async (data) => { await addAccessPoint(data); setActiveElement(null); }}
           onDeleteAccessPoint={removeAccessPoint}
+          mapZones={mapZones}
+          mapZoneDrawMode={mapZoneDrawMode}
+          mapZoneType={mapZoneType}
+          onAddMapZone={handleAddMapZone}
+          onDeleteMapZone={removeMapZone}
+          onMapZoneDrawDone={handleMapZoneDrawDone}
+          mapZonesVisible={mapZonesVisible}
         />
       </main>
 

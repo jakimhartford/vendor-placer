@@ -11,6 +11,7 @@ export function getSession(userId) {
       amenities: [], // array of { id, type, lat, lng, notes }
       accessPoints: [], // array of { id, lat, lng, label, notes }
       timeWindows: [], // array of { id, area, start, end }
+      mapZones: [], // array of { id, type, polygon, label, notes }
     });
   }
   return sessions.get(userId);

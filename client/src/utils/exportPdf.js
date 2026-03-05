@@ -15,6 +15,21 @@ export async function exportPdf({ mapContainer, spots, vendors, assignments, pri
         allowTaint: true,
         logging: false,
         scale: 2,
+        onclone: (clonedDoc) => {
+          const clonedContainer = clonedDoc.querySelector('.leaflet-container');
+          if (clonedContainer) {
+            const mapPane = clonedContainer.querySelector('.leaflet-map-pane');
+            if (mapPane) {
+              const transform = mapPane.style.transform;
+              const match = transform.match(/translate3d\(([^,]+),\s*([^,]+)/);
+              if (match) {
+                mapPane.style.transform = 'none';
+                mapPane.style.left = match[1];
+                mapPane.style.top = match[2];
+              }
+            }
+          }
+        },
       });
       const imgData = canvas.toDataURL('image/png');
       const imgW = pageW - 20;

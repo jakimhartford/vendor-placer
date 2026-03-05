@@ -14,6 +14,7 @@ const versionSchema = new mongoose.Schema({
   amenities: [Object],
   accessPoints: [Object],
   timeWindows: [Object],
+  mapZones: [Object],
   createdAt: { type: Date, default: Date.now },
 }, { _id: true });
 
@@ -75,6 +76,10 @@ const projectSchema = new mongoose.Schema({
     default: [],
   },
   timeWindows: {
+    type: [Object],
+    default: [],
+  },
+  mapZones: {
     type: [Object],
     default: [],
   },

@@ -12,6 +12,8 @@ import DeadZoneEditor from './DeadZoneEditor.jsx';
 import AmenityLayer from './AmenityLayer.jsx';
 import AmenityPlacer from './AmenityPlacer.jsx';
 import AccessPointLayer from './AccessPointLayer.jsx';
+import MapZoneLayer from './MapZoneLayer.jsx';
+import MapZoneDrawer from './MapZoneDrawer.jsx';
 
 export default function MapView({
   spots, vendors, assignments, selectedSpotId, paths,
@@ -21,6 +23,7 @@ export default function MapView({
   onRemoveDeadZone, onStartMove, onUpdateDeadZone, currentProjectId, pricingConfig,
   amenities, amenityPlaceMode, amenityType, onPlaceAmenity, onDeleteAmenity, amenitiesVisible,
   accessPoints, accessPointPlaceMode, onPlaceAccessPoint, onDeleteAccessPoint,
+  mapZones, mapZoneDrawMode, mapZoneType, onAddMapZone, onDeleteMapZone, onMapZoneDrawDone, mapZonesVisible,
   mapContainerRef,
 }) {
   const [mapStyle, setMapStyle] = useState('streets');
@@ -145,6 +148,8 @@ export default function MapView({
       <AmenityLayer amenities={amenities} onDelete={onDeleteAmenity} visible={amenitiesVisible} />
       <AmenityPlacer active={amenityPlaceMode} amenityType={amenityType} onPlace={onPlaceAmenity} />
       <AccessPointLayer accessPoints={accessPoints} onDelete={onDeleteAccessPoint} active={accessPointPlaceMode} onPlace={onPlaceAccessPoint} />
+      <MapZoneLayer mapZones={mapZones} onDelete={onDeleteMapZone} visible={mapZonesVisible} />
+      <MapZoneDrawer active={mapZoneDrawMode} zoneType={mapZoneType} onAddMapZone={onAddMapZone} onDone={onMapZoneDrawDone} />
       {editingDeadZone && (
         <DeadZoneEditor
           deadZone={editingDeadZone}

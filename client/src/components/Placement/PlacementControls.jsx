@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import ElementPalette from './ElementPalette.jsx';
 
 const ALL_CATEGORIES = ['food', 'art', 'craft', 'jewelry', 'clothing', 'services', 'other'];
 
@@ -17,10 +18,6 @@ export default function PlacementControls({
   onToggleSpotPlace,
   vendors,
   placements,
-  deadZoneDrawMode,
-  onToggleDeadZoneDraw,
-  deadZoneCount,
-  onClearDeadZones,
   selectedSpotIds,
   onDeleteSelected,
   projectSettings,
@@ -29,23 +26,24 @@ export default function PlacementControls({
   canRedo,
   onUndo,
   onRedo,
-  amenityPlaceMode,
-  onToggleAmenityPlace,
-  amenityType,
-  onAmenityTypeChange,
+  activeElement,
+  onSelectElement,
   amenitiesVisible,
   onToggleAmenitiesVisible,
   amenityCount,
   onClearAmenities,
-  accessPointPlaceMode,
-  onToggleAccessPointPlace,
   accessPointCount,
+  mapZonesVisible,
+  onToggleMapZonesVisible,
+  mapZoneCount,
+  onClearMapZones,
+  deadZoneCount,
+  onClearDeadZones,
 }) {
   const [spotSizeFt, setSpotSizeFt] = useState(12);
   const [spacingFt, setSpacingFt] = useState(4);
   const [showRules, setShowRules] = useState(false);
   const [showStreetTools, setShowStreetTools] = useState(true);
-  const [showZonesAmenities, setShowZonesAmenities] = useState(false);
   const vacantCount = spotCount - (filledCount || 0);
 
   const noSameAdj = projectSettings?.noSameAdjacentCategories || [];
@@ -57,7 +55,6 @@ export default function PlacementControls({
     onSettingsChange?.({ ...projectSettings, noSameAdjacentCategories: next });
   };
 
-  // Total booths needed by all vendors
   const totalBoothsNeeded = useMemo(() => {
     if (!vendors?.length) return 0;
     return vendors.reduce((sum, v) => sum + (v.booths || 1), 0);
@@ -238,139 +235,32 @@ export default function PlacementControls({
         )}
       </div>
 
-      {/* Zones & Amenities (collapsible) */}
+      {/* Map Elements Palette */}
       <div style={{ marginBottom: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-          <button
-            onClick={() => setShowZonesAmenities(!showZonesAmenities)}
-            data-tour="dead-zones"
-            style={{
-              background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer',
-              fontSize: 13, padding: 0, fontWeight: 600,
-              letterSpacing: '0.02em', textTransform: 'uppercase',
-            }}
-          >
-            {showZonesAmenities ? '▾' : '▸'} Zones & Amenities
-          </button>
-          {deadZoneCount > 0 && !showZonesAmenities && (
-            <button
-              className="btn btn-secondary"
-              style={{ padding: '1px 6px', fontSize: 9, width: 'auto', marginBottom: 0 }}
-              onClick={onClearDeadZones}
-            >
-              Clear Dead Zones ({deadZoneCount})
-            </button>
-          )}
+        <div style={{
+          fontSize: 13, color: '#cbd5e1', fontWeight: 600, marginBottom: 6,
+          letterSpacing: '0.02em', textTransform: 'uppercase',
+        }}
+          data-tour="dead-zones"
+        >
+          Map Elements
         </div>
-        {showZonesAmenities && (
-          <div>
-            {/* Dead Zone tools */}
-            <div style={{ display: 'flex', gap: 6, marginBottom: 0 }}>
-              <button
-                className="btn"
-                disabled={loading}
-                onClick={onToggleDeadZoneDraw}
-                style={{
-                  flex: 1,
-                  background: deadZoneDrawMode ? '#991b1b' : '#dc2626',
-                  color: '#fff',
-                  fontWeight: 600,
-                  fontSize: 11,
-                }}
-              >
-                {deadZoneDrawMode ? 'Cancel Draw' : 'Draw Dead Zone'}
-              </button>
-              {deadZoneCount > 0 && (
-                <button
-                  className="btn"
-                  disabled={loading}
-                  onClick={onClearDeadZones}
-                  style={{
-                    background: '#7f1d1d',
-                    color: '#fff',
-                    fontWeight: 600,
-                    fontSize: 11,
-                  }}
-                >
-                  Clear ({deadZoneCount})
-                </button>
-              )}
-            </div>
-
-            {/* Amenity tools */}
-            <div style={{ display: 'flex', gap: 6, marginTop: 6, marginBottom: 0 }}>
-              <button
-                className="btn"
-                disabled={loading}
-                onClick={onToggleAmenityPlace}
-                data-tour="amenities"
-                style={{
-                  flex: 1,
-                  background: amenityPlaceMode ? '#991b1b' : '#f59e0b',
-                  color: amenityPlaceMode ? '#fff' : '#000',
-                  fontWeight: 600,
-                  fontSize: 11,
-                }}
-              >
-                {amenityPlaceMode ? 'Stop Placing' : 'Place Amenity'}
-              </button>
-              {amenityPlaceMode && (
-                <select
-                  value={amenityType}
-                  onChange={(e) => onAmenityTypeChange(e.target.value)}
-                  style={{
-                    padding: '4px 6px', fontSize: 10, background: '#0f172a', color: '#e2e8f0',
-                    border: '1px solid #334155', borderRadius: 4, marginBottom: 0,
-                  }}
-                >
-                  <option value="power">Power</option>
-                  <option value="water">Water</option>
-                  <option value="restroom">Restroom</option>
-                  <option value="trash">Trash</option>
-                </select>
-              )}
-            </div>
-            <div style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center' }}>
-              <label style={{ fontSize: 10, color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <input type="checkbox" checked={amenitiesVisible} onChange={onToggleAmenitiesVisible} />
-                Show Amenities{amenityCount > 0 ? ` (${amenityCount})` : ''}
-              </label>
-              {amenityCount > 0 && (
-                <button
-                  className="btn btn-secondary"
-                  style={{ padding: '2px 8px', fontSize: 10, width: 'auto', marginBottom: 0 }}
-                  onClick={onClearAmenities}
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-
-            {/* Access Point tools */}
-            <div style={{ display: 'flex', gap: 6, marginTop: 6, marginBottom: 0 }}>
-              <button
-                className="btn"
-                disabled={loading}
-                onClick={onToggleAccessPointPlace}
-                data-tour="access-points"
-                style={{
-                  flex: 1,
-                  background: accessPointPlaceMode ? '#991b1b' : '#10b981',
-                  color: '#fff',
-                  fontWeight: 600,
-                  fontSize: 11,
-                }}
-              >
-                {accessPointPlaceMode ? 'Stop Placing' : 'Access Point'}
-              </button>
-              {accessPointCount > 0 && (
-                <span style={{ fontSize: 10, color: '#94a3b8', alignSelf: 'center' }}>
-                  {accessPointCount} point{accessPointCount !== 1 ? 's' : ''}
-                </span>
-              )}
-            </div>
-          </div>
-        )}
+        <ElementPalette
+          activeElementId={activeElement}
+          onSelectElement={onSelectElement}
+          amenitiesVisible={amenitiesVisible}
+          onToggleAmenitiesVisible={onToggleAmenitiesVisible}
+          amenityCount={amenityCount}
+          onClearAmenities={onClearAmenities}
+          mapZonesVisible={mapZonesVisible}
+          onToggleMapZonesVisible={onToggleMapZonesVisible}
+          mapZoneCount={mapZoneCount}
+          onClearMapZones={onClearMapZones}
+          deadZoneCount={deadZoneCount}
+          onClearDeadZones={onClearDeadZones}
+          accessPointCount={accessPointCount}
+          loading={loading}
+        />
       </div>
 
       <hr style={{ border: 'none', borderTop: '1px solid #334155', margin: '10px 0' }} />

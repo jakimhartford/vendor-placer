@@ -13,6 +13,7 @@ import { shareRoutes } from './routes/share.js';
 import { amenityRoutes } from './routes/amenities.js';
 import { logisticsRoutes } from './routes/logistics.js';
 import { checkinRoutes } from './routes/checkin.js';
+import { mapZoneRoutes } from './routes/mapZones.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -33,6 +34,7 @@ app.use('/api/projects', requireAuth, projectRoutes);
 app.use('/api/dead-zones', requireAuth, deadZoneRoutes);
 app.use('/api/amenities', requireAuth, amenityRoutes);
 app.use('/api/logistics', requireAuth, logisticsRoutes);
+app.use('/api/map-zones', requireAuth, mapZoneRoutes);
 app.use('/api/projects', checkinRoutes);
 
 async function start() {

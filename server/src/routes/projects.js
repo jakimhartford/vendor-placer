@@ -46,6 +46,7 @@ projectRoutes.get('/:id', async (req, res) => {
     session.amenities = project.amenities || [];
     session.accessPoints = project.accessPoints || [];
     session.timeWindows = project.timeWindows || [];
+    session.mapZones = project.mapZones || [];
 
     return res.json({
       id: project._id,
@@ -60,6 +61,7 @@ projectRoutes.get('/:id', async (req, res) => {
       amenities: project.amenities || [],
       accessPoints: project.accessPoints || [],
       timeWindows: project.timeWindows || [],
+      mapZones: project.mapZones || [],
       mapCenter: project.mapCenter,
       zoom: project.zoom,
       settings: project.settings,
@@ -88,6 +90,7 @@ projectRoutes.post('/', async (req, res) => {
       amenities: session.amenities,
       accessPoints: session.accessPoints,
       timeWindows: session.timeWindows,
+      mapZones: session.mapZones,
       paths: paths || [],
       mapCenter: mapCenter || null,
       zoom: zoom || null,
@@ -127,6 +130,7 @@ projectRoutes.put('/:id', async (req, res) => {
     project.amenities = session.amenities;
     project.accessPoints = session.accessPoints;
     project.timeWindows = session.timeWindows;
+    project.mapZones = session.mapZones;
     project.paths = paths ?? project.paths;
     if (settings) project.settings = settings;
 
@@ -172,6 +176,7 @@ projectRoutes.post('/:id/versions', async (req, res) => {
       amenities: session.amenities,
       accessPoints: session.accessPoints,
       timeWindows: session.timeWindows,
+      mapZones: session.mapZones,
       paths: project.paths,
       settings: project.settings,
     };
@@ -223,6 +228,7 @@ projectRoutes.post('/:id/versions/:versionId/load', async (req, res) => {
     session.amenities = version.amenities || [];
     session.accessPoints = version.accessPoints || [];
     session.timeWindows = version.timeWindows || [];
+    session.mapZones = version.mapZones || [];
 
     // Also update the project's top-level state
     project.spotsGeoJSON = version.spotsGeoJSON;
@@ -232,6 +238,7 @@ projectRoutes.post('/:id/versions/:versionId/load', async (req, res) => {
     project.amenities = version.amenities || [];
     project.accessPoints = version.accessPoints || [];
     project.timeWindows = version.timeWindows || [];
+    project.mapZones = version.mapZones || [];
     project.paths = version.paths || project.paths;
     if (version.settings) project.settings = version.settings;
     project.activeVersionId = version._id;

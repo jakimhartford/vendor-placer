@@ -7,6 +7,9 @@ const AMENITY_CONFIG = {
   water: { icon: '\uD83D\uDCA7', color: '#3b82f6', label: 'Water' },
   restroom: { icon: '\uD83D\uDEBB', color: '#8b5cf6', label: 'Restroom' },
   trash: { icon: '\uD83D\uDDD1\uFE0F', color: '#6b7280', label: 'Trash' },
+  info_booth: { icon: '\u2139\uFE0F', color: '#3b82f6', label: 'Info Booth' },
+  stage: { icon: '\uD83C\uDFAD', color: '#ec4899', label: 'Stage' },
+  sponsor: { icon: '\uD83C\uDFF7\uFE0F', color: '#a855f7', label: 'Sponsor' },
 };
 
 function createIcon(type) {

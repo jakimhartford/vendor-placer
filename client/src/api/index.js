@@ -187,6 +187,28 @@ export function clearDeadZones() {
   return api.delete('/api/dead-zones').then((res) => res.data);
 }
 
+// ---------- Map Zones ----------
+
+export function fetchMapZones() {
+  return api.get('/api/map-zones').then((res) => res.data);
+}
+
+export function createMapZone(data) {
+  return api.post('/api/map-zones', data).then((res) => res.data);
+}
+
+export function updateMapZone(id, data) {
+  return api.patch(`/api/map-zones/${id}`, data).then((res) => res.data);
+}
+
+export function deleteMapZone(id) {
+  return api.delete(`/api/map-zones/${id}`).then((res) => res.data);
+}
+
+export function clearMapZones() {
+  return api.delete('/api/map-zones').then((res) => res.data);
+}
+
 // ---------- Amenities ----------
 
 export function fetchAmenities() {
