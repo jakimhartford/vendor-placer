@@ -582,12 +582,8 @@ export default function App() {
         </div>
 
         <div className="sidebar-section">
-          <h3>Placement Results</h3>
+          <h3>Results & Export</h3>
           <PlacementStats placements={placements} vendors={vendors} />
-        </div>
-
-        <div className="sidebar-section">
-          <h3>Export</h3>
           <ExportPdfButton
             mapRef={mapRef}
             spots={spots}
@@ -597,17 +593,7 @@ export default function App() {
           />
         </div>
 
-        <div className="sidebar-section">
-          <h3>Logistics</h3>
-          <LogisticsPanel
-            accessPoints={accessPoints}
-            timeWindows={timeWindows}
-            onAddTimeWindow={addTimeWindow}
-            onDeleteTimeWindow={removeTimeWindow}
-          />
-        </div>
-
-        <div className="sidebar-section">
+        <div className="sidebar-section" data-tour="pricing-revenue">
           <h3>Pricing & Revenue</h3>
           <PricingConfig config={pricingConfig} onChange={setPricingConfig} />
           <RevenueSummary
@@ -615,6 +601,16 @@ export default function App() {
             vendors={vendors}
             assignments={placements.assignments}
             pricingConfig={pricingConfig}
+          />
+        </div>
+
+        <div className="sidebar-section" data-tour="logistics">
+          <h3>Logistics</h3>
+          <LogisticsPanel
+            accessPoints={accessPoints}
+            timeWindows={timeWindows}
+            onAddTimeWindow={addTimeWindow}
+            onDeleteTimeWindow={removeTimeWindow}
           />
         </div>
 

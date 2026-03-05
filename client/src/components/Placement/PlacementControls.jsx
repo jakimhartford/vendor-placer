@@ -44,6 +44,8 @@ export default function PlacementControls({
   const [spotSizeFt, setSpotSizeFt] = useState(12);
   const [spacingFt, setSpacingFt] = useState(4);
   const [showRules, setShowRules] = useState(false);
+  const [showStreetTools, setShowStreetTools] = useState(true);
+  const [showZonesAmenities, setShowZonesAmenities] = useState(false);
   const vacantCount = spotCount - (filledCount || 0);
 
   const noSameAdj = projectSettings?.noSameAdjacentCategories || [];
@@ -113,216 +115,261 @@ export default function PlacementControls({
         </div>
       )}
 
-      {/* Draw Street section */}
-      <label style={{ fontSize: 11, color: '#94a3b8', display: 'block', marginBottom: 4 }}>
-        Draw a line for each row of vendor spots
-      </label>
-
-      <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
-        <div style={{ flex: 1 }}>
-          <label style={{ fontSize: 10, color: '#64748b', display: 'block', marginBottom: 2 }}>
-            Spot size (ft)
-          </label>
-          <input
-            type="number"
-            value={spotSizeFt}
-            onChange={(e) => setSpotSizeFt(Number(e.target.value) || 12)}
-            min={6}
-            max={20}
-            style={{ width: '100%', padding: '3px 6px', fontSize: 12, boxSizing: 'border-box' }}
-          />
-        </div>
-        <div style={{ flex: 1 }}>
-          <label style={{ fontSize: 10, color: '#64748b', display: 'block', marginBottom: 2 }}>
-            Spacing (ft)
-          </label>
-          <input
-            type="number"
-            value={spacingFt}
-            onChange={(e) => setSpacingFt(Number(e.target.value) || 4)}
-            min={0}
-            max={20}
-            style={{ width: '100%', padding: '3px 6px', fontSize: 12, boxSizing: 'border-box' }}
-          />
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', gap: 6, marginBottom: 0 }}>
+      {/* Street & Spot Tools (collapsible) */}
+      <div style={{ marginBottom: 8 }}>
         <button
-          className="btn"
-          disabled={loading}
-          onClick={() => onToggleStreetDraw({ spotSizeFt, spacingFt })}
-          data-tour="draw-street"
+          onClick={() => setShowStreetTools(!showStreetTools)}
           style={{
-            flex: 1,
-            background: streetDrawMode ? '#dc2626' : '#facc15',
-            color: streetDrawMode ? '#fff' : '#000',
-            fontWeight: 600,
+            background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer',
+            fontSize: 11, padding: 0, fontWeight: 600, marginBottom: 6, display: 'block',
           }}
         >
-          {streetDrawMode ? 'Cancel Drawing' : 'Draw Street'}
+          {showStreetTools ? '▾' : '▸'} Street & Spot Tools
         </button>
-        <button
-          className="btn"
-          disabled={loading}
-          onClick={onToggleSpotPlace}
-          data-tour="place-spot"
-          style={{
-            flex: 1,
-            background: spotPlaceMode ? '#dc2626' : '#22d3ee',
-            color: spotPlaceMode ? '#fff' : '#000',
-            fontWeight: 600,
-          }}
-        >
-          {spotPlaceMode ? 'Stop Placing' : 'Place Spot'}
-        </button>
-      </div>
+        {showStreetTools && (
+          <div>
+            <label style={{ fontSize: 11, color: '#94a3b8', display: 'block', marginBottom: 4 }}>
+              Draw a line for each row of vendor spots
+            </label>
 
-      {/* Dead Zone tools */}
-      <div style={{ display: 'flex', gap: 6, marginTop: 6, marginBottom: 0 }}>
-        <button
-          className="btn"
-          disabled={loading}
-          onClick={onToggleDeadZoneDraw}
-          style={{
-            flex: 1,
-            background: deadZoneDrawMode ? '#991b1b' : '#dc2626',
-            color: '#fff',
-            fontWeight: 600,
-            fontSize: 11,
-          }}
-        >
-          {deadZoneDrawMode ? 'Cancel Draw' : 'Draw Dead Zone'}
-        </button>
-        {deadZoneCount > 0 && (
-          <button
-            className="btn"
-            disabled={loading}
-            onClick={onClearDeadZones}
-            style={{
-              background: '#7f1d1d',
-              color: '#fff',
-              fontWeight: 600,
-              fontSize: 11,
-            }}
-          >
-            Clear ({deadZoneCount})
-          </button>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 10, color: '#64748b', display: 'block', marginBottom: 2 }}>
+                  Spot size (ft)
+                </label>
+                <input
+                  type="number"
+                  value={spotSizeFt}
+                  onChange={(e) => setSpotSizeFt(Number(e.target.value) || 12)}
+                  min={6}
+                  max={20}
+                  style={{ width: '100%', padding: '3px 6px', fontSize: 12, boxSizing: 'border-box' }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 10, color: '#64748b', display: 'block', marginBottom: 2 }}>
+                  Spacing (ft)
+                </label>
+                <input
+                  type="number"
+                  value={spacingFt}
+                  onChange={(e) => setSpacingFt(Number(e.target.value) || 4)}
+                  min={0}
+                  max={20}
+                  style={{ width: '100%', padding: '3px 6px', fontSize: 12, boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 6, marginBottom: 0 }}>
+              <button
+                className="btn"
+                disabled={loading}
+                onClick={() => onToggleStreetDraw({ spotSizeFt, spacingFt })}
+                data-tour="draw-street"
+                style={{
+                  flex: 1,
+                  background: streetDrawMode ? '#dc2626' : '#facc15',
+                  color: streetDrawMode ? '#fff' : '#000',
+                  fontWeight: 600,
+                }}
+              >
+                {streetDrawMode ? 'Cancel Drawing' : 'Draw Street'}
+              </button>
+              <button
+                className="btn"
+                disabled={loading}
+                onClick={onToggleSpotPlace}
+                data-tour="place-spot"
+                style={{
+                  flex: 1,
+                  background: spotPlaceMode ? '#dc2626' : '#22d3ee',
+                  color: spotPlaceMode ? '#fff' : '#000',
+                  fontWeight: 600,
+                }}
+              >
+                {spotPlaceMode ? 'Stop Placing' : 'Place Spot'}
+              </button>
+            </div>
+
+            {/* Multi-select delete */}
+            {selectedSpotIds?.size > 0 && (
+              <button
+                className="btn"
+                onClick={onDeleteSelected}
+                style={{
+                  marginTop: 6,
+                  background: '#f97316',
+                  color: '#fff',
+                  fontWeight: 600,
+                }}
+              >
+                Delete Selected ({selectedSpotIds.size})
+              </button>
+            )}
+
+            {pathCount > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, marginBottom: 6 }}>
+                <span style={{ fontSize: 11, color: '#94a3b8' }}>
+                  {pathCount} line{pathCount !== 1 ? 's' : ''} drawn
+                </span>
+                <button
+                  className="btn btn-secondary"
+                  style={{ padding: '2px 8px', fontSize: 11, width: 'auto', marginBottom: 0 }}
+                  onClick={onClearPaths}
+                >
+                  Clear Lines
+                </button>
+              </div>
+            )}
+
+            {spotCount > 0 && (
+              <button
+                className="btn btn-secondary"
+                disabled={loading}
+                onClick={onClearGrid}
+                style={{ marginTop: 4, marginBottom: 0 }}
+              >
+                Clear All Spots
+              </button>
+            )}
+          </div>
         )}
       </div>
 
-      {/* Amenity tools */}
-      <div style={{ display: 'flex', gap: 6, marginTop: 6, marginBottom: 0 }}>
-        <button
-          className="btn"
-          disabled={loading}
-          onClick={onToggleAmenityPlace}
-          style={{
-            flex: 1,
-            background: amenityPlaceMode ? '#991b1b' : '#f59e0b',
-            color: amenityPlaceMode ? '#fff' : '#000',
-            fontWeight: 600,
-            fontSize: 11,
-          }}
-        >
-          {amenityPlaceMode ? 'Stop Placing' : 'Place Amenity'}
-        </button>
-        {amenityPlaceMode && (
-          <select
-            value={amenityType}
-            onChange={(e) => onAmenityTypeChange(e.target.value)}
-            style={{
-              padding: '4px 6px', fontSize: 10, background: '#0f172a', color: '#e2e8f0',
-              border: '1px solid #334155', borderRadius: 4, marginBottom: 0,
-            }}
-          >
-            <option value="power">Power</option>
-            <option value="water">Water</option>
-            <option value="restroom">Restroom</option>
-            <option value="trash">Trash</option>
-          </select>
-        )}
-      </div>
-      <div style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center' }}>
-        <label style={{ fontSize: 10, color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-          <input type="checkbox" checked={amenitiesVisible} onChange={onToggleAmenitiesVisible} />
-          Show Amenities{amenityCount > 0 ? ` (${amenityCount})` : ''}
-        </label>
-        {amenityCount > 0 && (
-          <button
-            className="btn btn-secondary"
-            style={{ padding: '2px 8px', fontSize: 10, width: 'auto', marginBottom: 0 }}
-            onClick={onClearAmenities}
-          >
-            Clear
-          </button>
-        )}
-      </div>
-
-      {/* Access Point tools */}
-      <div style={{ display: 'flex', gap: 6, marginTop: 6, marginBottom: 0 }}>
-        <button
-          className="btn"
-          disabled={loading}
-          onClick={onToggleAccessPointPlace}
-          style={{
-            flex: 1,
-            background: accessPointPlaceMode ? '#991b1b' : '#10b981',
-            color: '#fff',
-            fontWeight: 600,
-            fontSize: 11,
-          }}
-        >
-          {accessPointPlaceMode ? 'Stop Placing' : 'Access Point'}
-        </button>
-        {accessPointCount > 0 && (
-          <span style={{ fontSize: 10, color: '#94a3b8', alignSelf: 'center' }}>
-            {accessPointCount} point{accessPointCount !== 1 ? 's' : ''}
-          </span>
-        )}
-      </div>
-
-      {/* Multi-select delete */}
-      {selectedSpotIds?.size > 0 && (
-        <button
-          className="btn"
-          onClick={onDeleteSelected}
-          style={{
-            marginTop: 6,
-            background: '#f97316',
-            color: '#fff',
-            fontWeight: 600,
-          }}
-        >
-          Delete Selected ({selectedSpotIds.size})
-        </button>
-      )}
-
-      {pathCount > 0 && (
+      {/* Zones & Amenities (collapsible) */}
+      <div style={{ marginBottom: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-          <span style={{ fontSize: 11, color: '#94a3b8' }}>
-            {pathCount} line{pathCount !== 1 ? 's' : ''} drawn
-          </span>
           <button
-            className="btn btn-secondary"
-            style={{ padding: '2px 8px', fontSize: 11, width: 'auto', marginBottom: 0 }}
-            onClick={onClearPaths}
+            onClick={() => setShowZonesAmenities(!showZonesAmenities)}
+            data-tour="dead-zones"
+            style={{
+              background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer',
+              fontSize: 11, padding: 0, fontWeight: 600,
+            }}
           >
-            Clear Lines
+            {showZonesAmenities ? '▾' : '▸'} Zones & Amenities
           </button>
+          {deadZoneCount > 0 && !showZonesAmenities && (
+            <button
+              className="btn btn-secondary"
+              style={{ padding: '1px 6px', fontSize: 9, width: 'auto', marginBottom: 0 }}
+              onClick={onClearDeadZones}
+            >
+              Clear Dead Zones ({deadZoneCount})
+            </button>
+          )}
         </div>
-      )}
+        {showZonesAmenities && (
+          <div>
+            {/* Dead Zone tools */}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 0 }}>
+              <button
+                className="btn"
+                disabled={loading}
+                onClick={onToggleDeadZoneDraw}
+                style={{
+                  flex: 1,
+                  background: deadZoneDrawMode ? '#991b1b' : '#dc2626',
+                  color: '#fff',
+                  fontWeight: 600,
+                  fontSize: 11,
+                }}
+              >
+                {deadZoneDrawMode ? 'Cancel Draw' : 'Draw Dead Zone'}
+              </button>
+              {deadZoneCount > 0 && (
+                <button
+                  className="btn"
+                  disabled={loading}
+                  onClick={onClearDeadZones}
+                  style={{
+                    background: '#7f1d1d',
+                    color: '#fff',
+                    fontWeight: 600,
+                    fontSize: 11,
+                  }}
+                >
+                  Clear ({deadZoneCount})
+                </button>
+              )}
+            </div>
 
-      {spotCount > 0 && (
-        <button
-          className="btn btn-secondary"
-          disabled={loading}
-          onClick={onClearGrid}
-          style={{ marginBottom: 4 }}
-        >
-          Clear All Spots
-        </button>
-      )}
+            {/* Amenity tools */}
+            <div style={{ display: 'flex', gap: 6, marginTop: 6, marginBottom: 0 }}>
+              <button
+                className="btn"
+                disabled={loading}
+                onClick={onToggleAmenityPlace}
+                data-tour="amenities"
+                style={{
+                  flex: 1,
+                  background: amenityPlaceMode ? '#991b1b' : '#f59e0b',
+                  color: amenityPlaceMode ? '#fff' : '#000',
+                  fontWeight: 600,
+                  fontSize: 11,
+                }}
+              >
+                {amenityPlaceMode ? 'Stop Placing' : 'Place Amenity'}
+              </button>
+              {amenityPlaceMode && (
+                <select
+                  value={amenityType}
+                  onChange={(e) => onAmenityTypeChange(e.target.value)}
+                  style={{
+                    padding: '4px 6px', fontSize: 10, background: '#0f172a', color: '#e2e8f0',
+                    border: '1px solid #334155', borderRadius: 4, marginBottom: 0,
+                  }}
+                >
+                  <option value="power">Power</option>
+                  <option value="water">Water</option>
+                  <option value="restroom">Restroom</option>
+                  <option value="trash">Trash</option>
+                </select>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center' }}>
+              <label style={{ fontSize: 10, color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <input type="checkbox" checked={amenitiesVisible} onChange={onToggleAmenitiesVisible} />
+                Show Amenities{amenityCount > 0 ? ` (${amenityCount})` : ''}
+              </label>
+              {amenityCount > 0 && (
+                <button
+                  className="btn btn-secondary"
+                  style={{ padding: '2px 8px', fontSize: 10, width: 'auto', marginBottom: 0 }}
+                  onClick={onClearAmenities}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {/* Access Point tools */}
+            <div style={{ display: 'flex', gap: 6, marginTop: 6, marginBottom: 0 }}>
+              <button
+                className="btn"
+                disabled={loading}
+                onClick={onToggleAccessPointPlace}
+                data-tour="access-points"
+                style={{
+                  flex: 1,
+                  background: accessPointPlaceMode ? '#991b1b' : '#10b981',
+                  color: '#fff',
+                  fontWeight: 600,
+                  fontSize: 11,
+                }}
+              >
+                {accessPointPlaceMode ? 'Stop Placing' : 'Access Point'}
+              </button>
+              {accessPointCount > 0 && (
+                <span style={{ fontSize: 10, color: '#94a3b8', alignSelf: 'center' }}>
+                  {accessPointCount} point{accessPointCount !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       <hr style={{ border: 'none', borderTop: '1px solid #334155', margin: '10px 0' }} />
 

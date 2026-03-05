@@ -21,6 +21,7 @@ export default function ExportPdfButton({ mapRef, spots, vendors, assignments, p
       className="btn btn-secondary"
       onClick={handleExport}
       disabled={generating}
+      data-tour="export-pdf"
       style={{ fontSize: 11, padding: '6px 10px' }}
     >
       {generating ? 'Generating...' : 'Export PDF'}

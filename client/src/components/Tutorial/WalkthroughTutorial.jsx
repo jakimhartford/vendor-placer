@@ -37,6 +37,13 @@ const STEPS = [
     position: 'left',
   },
   {
+    id: 'dead-zones',
+    target: '[data-tour="dead-zones"]',
+    title: 'Dead Zones & Amenities',
+    body: 'Expand "Zones & Amenities" to draw dead zones (areas where no spots can go), place amenities like power or water, and mark access points for logistics.',
+    position: 'right',
+  },
+  {
     id: 'location-search',
     target: '[data-tour="location-search"]',
     title: 'Location Search',
@@ -51,10 +58,31 @@ const STEPS = [
     position: 'right',
   },
   {
+    id: 'results-export',
+    target: '[data-tour="export-pdf"]',
+    title: 'Results & Export',
+    body: 'After placement, view stats on how vendors were assigned. Export your layout as a PDF to share with your team.',
+    position: 'right',
+  },
+  {
+    id: 'pricing-revenue',
+    target: '[data-tour="pricing-revenue"]',
+    title: 'Pricing & Revenue',
+    body: 'Set booth pricing by tier and category, then see a revenue summary based on your current placement.',
+    position: 'right',
+  },
+  {
+    id: 'logistics',
+    target: '[data-tour="logistics"]',
+    title: 'Logistics',
+    body: 'Manage load-in/load-out time windows and see how access points connect to vendor spots for smooth event setup.',
+    position: 'right',
+  },
+  {
     id: 'project-bar',
     target: '[data-tour="project-bar"]',
-    title: 'Save Your Project',
-    body: 'Save your layout as a project so you can come back to it later. Create new projects or load existing ones.',
+    title: 'Save & Projects',
+    body: 'Save your layout as a project, create versions, and switch to check-in view on event day. Load existing projects anytime.',
     position: 'right',
   },
   {
