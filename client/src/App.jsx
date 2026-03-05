@@ -33,6 +33,7 @@ export default function App() {
     addSingleSpot,
     setSpots: setSpotsLocal,
     updateSpot,
+    updateSpotsBatch,
     deleteSpot,
     deleteSpotsBatch,
   } = useSpots();
@@ -194,10 +195,8 @@ export default function App() {
   };
 
   const handleMarkDeadZones = useCallback(async (ids) => {
-    for (const id of ids) {
-      await updateSpot(id, { deadZone: true });
-    }
-  }, [updateSpot]);
+    await updateSpotsBatch(ids, { deadZone: true });
+  }, [updateSpotsBatch]);
 
   const handleDeadZoneDrawDone = useCallback(() => {
     setDeadZoneDrawMode(false);

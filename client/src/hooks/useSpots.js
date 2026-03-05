@@ -9,6 +9,7 @@ import {
   updateSpot as apiUpdateSpot,
   deleteSpot as apiDeleteSpot,
   deleteSpotsBatch as apiDeleteSpotsBatch,
+  updateSpotsBatch as apiUpdateSpotsBatch,
 } from '../api/index.js';
 
 const EMPTY_FC = { type: 'FeatureCollection', features: [] };
@@ -158,5 +159,21 @@ export default function useSpots() {
     }
   }, [loadSpots]);
 
-  return { spots, loading, loadSpots, saveSpots, generateGrid, generateFromPath, clearSpots, addSingleSpot, setSpots, updateSpot, deleteSpot, deleteSpotsBatch };
+  const updateSpotsBatch = useCallback(async (ids, updates) => {
+    setLoading(true);
+    try {
+      const data = await apiUpdateSpotsBatch(ids, updates);
+      if (data.spotsGeoJSON && data.spotsGeoJSON.type === 'FeatureCollection') {
+        setSpots(data.spotsGeoJSON);
+      } else {
+        await loadSpots();
+      }
+    } catch (err) {
+      console.error('updateSpotsBatch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [loadSpots]);
+
+  return { spots, loading, loadSpots, saveSpots, generateGrid, generateFromPath, clearSpots, addSingleSpot, setSpots, updateSpot, updateSpotsBatch, deleteSpot, deleteSpotsBatch };
 }

@@ -101,6 +101,10 @@ export function deleteSpotsBatch(ids) {
   return api.post('/api/spots/delete-batch', { ids }).then((res) => res.data);
 }
 
+export function updateSpotsBatch(ids, updates) {
+  return api.post('/api/spots/update-batch', { ids, updates }).then((res) => res.data);
+}
+
 // ---------- Placements ----------
 
 export function runPlacement() {

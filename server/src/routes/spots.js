@@ -460,6 +460,33 @@ spotRoutes.post('/delete-batch', (req, res) => {
   });
 });
 
+// POST /api/spots/update-batch — update properties on multiple spots
+spotRoutes.post('/update-batch', (req, res) => {
+  const { ids, updates } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'ids must be a non-empty array' });
+  }
+  if (!updates || typeof updates !== 'object') {
+    return res.status(400).json({ error: 'updates must be an object' });
+  }
+
+  const session = getSession(req.user.id);
+  const idSet = new Set(ids);
+  let updated = 0;
+
+  for (const feature of session.spotsGeoJSON.features) {
+    if (idSet.has(feature.properties?.id)) {
+      feature.properties = { ...feature.properties, ...updates, id: feature.properties.id };
+      updated++;
+    }
+  }
+
+  return res.json({
+    message: `Updated ${updated} spots`,
+    spotsGeoJSON: session.spotsGeoJSON,
+  });
+});
+
 // POST /api/spots/generate-from-path
 spotRoutes.post('/generate-from-path', (req, res) => {
   const { path, spotSizeFt = 12, spacingFt = 2, label = 'S' } = req.body;
