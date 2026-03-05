@@ -4,69 +4,55 @@ import L from 'leaflet';
 
 export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone }) {
   const map = useMap();
-  const startRef = useRef(null);
-  const rectRef = useRef(null);
-  const [hasRect, setHasRect] = useState(false);
+  const layerRef = useRef(null);
+  const [drawn, setDrawn] = useState(false);
 
+  // Listen for pm:create once
   useEffect(() => {
-    if (!map || !active) return;
+    if (!map) return;
 
-    startRef.current = null;
-    rectRef.current = null;
-    setHasRect(false);
-    map.getContainer().style.cursor = 'crosshair';
-
-    const onMouseDown = (e) => {
-      if (hasRect) return;
-      startRef.current = e.latlng;
-      map.dragging.disable();
+    const handleCreate = (e) => {
+      if (e.shape !== 'Rectangle') return;
+      layerRef.current = e.layer;
+      setDrawn(true);
     };
 
-    const onMouseMove = (e) => {
-      if (!startRef.current) return;
-      const bounds = L.latLngBounds(startRef.current, e.latlng);
-      if (rectRef.current) {
-        rectRef.current.setBounds(bounds);
-      } else {
-        rectRef.current = L.rectangle(bounds, {
-          color: '#dc2626', weight: 2, fillColor: '#dc2626', fillOpacity: 0.2,
-        }).addTo(map);
-      }
+    map.on('pm:create', handleCreate);
+    return () => {
+      map.off('pm:create', handleCreate);
     };
+  }, [map]);
 
-    const onMouseUp = () => {
-      if (!startRef.current) return;
-      startRef.current = null;
-      map.dragging.enable();
-      if (rectRef.current) {
-        setHasRect(true);
-        // Enable editing so user can adjust corners
-        if (rectRef.current.pm) {
-          rectRef.current.pm.enable();
-          if (rectRef.current.pm.enableRotate) rectRef.current.pm.enableRotate();
-        }
-      }
-    };
+  // Toggle draw mode
+  useEffect(() => {
+    if (!map) return;
 
-    map.on('mousedown', onMouseDown);
-    map.on('mousemove', onMouseMove);
-    map.on('mouseup', onMouseUp);
+    if (active && !drawn) {
+      map.pm.enableDraw('Rectangle', {
+        pathOptions: { color: '#dc2626', weight: 2, fillColor: '#dc2626', fillOpacity: 0.2 },
+      });
+    } else {
+      map.pm.disableDraw('Rectangle');
+    }
 
     return () => {
-      map.off('mousedown', onMouseDown);
-      map.off('mousemove', onMouseMove);
-      map.off('mouseup', onMouseUp);
-      map.dragging.enable();
-      map.getContainer().style.cursor = '';
-      if (rectRef.current) {
-        map.removeLayer(rectRef.current);
-        rectRef.current = null;
-      }
+      map.pm.disableDraw('Rectangle');
     };
-  }, [map, active]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [map, active, drawn]);
+
+  // Clean up on deactivate
+  useEffect(() => {
+    if (!active) {
+      if (layerRef.current && map) {
+        map.removeLayer(layerRef.current);
+        layerRef.current = null;
+      }
+      setDrawn(false);
+    }
+  }, [active, map]);
 
   const handleConfirm = () => {
-    const layer = rectRef.current;
+    const layer = layerRef.current;
     if (!layer) return;
 
     const layerLatLngs = layer.getLatLngs()[0];
@@ -88,8 +74,8 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
     }
 
     map.removeLayer(layer);
-    rectRef.current = null;
-    setHasRect(false);
+    layerRef.current = null;
+    setDrawn(false);
 
     if (ids.length > 0 && onMarkDeadZones) {
       onMarkDeadZones(ids);
@@ -98,64 +84,40 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
   };
 
   const handleCancel = () => {
-    if (rectRef.current) {
-      map.removeLayer(rectRef.current);
-      rectRef.current = null;
+    if (layerRef.current) {
+      map.removeLayer(layerRef.current);
+      layerRef.current = null;
     }
-    setHasRect(false);
+    setDrawn(false);
     if (onDone) onDone();
   };
 
   if (!active) return null;
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        top: 10,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 1000,
-        display: 'flex',
-        gap: 8,
-        alignItems: 'center',
-        pointerEvents: 'auto',
-      }}
-    >
+    <div style={{
+      position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)',
+      zIndex: 1000, display: 'flex', gap: 8, alignItems: 'center', pointerEvents: 'auto',
+    }}>
       <div style={{
-        background: '#dc2626',
-        color: '#fff',
-        padding: '6px 16px',
-        borderRadius: 6,
-        fontWeight: 600,
-        fontSize: 13,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+        background: '#dc2626', color: '#fff', padding: '6px 16px', borderRadius: 6,
+        fontWeight: 600, fontSize: 13, boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
         pointerEvents: 'none',
       }}>
-        {hasRect ? 'Adjust shape, then confirm' : 'Click and drag to draw dead zone'}
+        {drawn ? 'Adjust if needed, then confirm' : 'Click and drag to draw dead zone rectangle'}
       </div>
-      {hasRect && (
+      {drawn && (
         <>
-          <button
-            onClick={handleConfirm}
-            style={{
-              padding: '6px 14px', background: '#dc2626', color: '#fff', border: 'none',
-              borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-            }}
-          >
-            Confirm
-          </button>
-          <button
-            onClick={handleCancel}
-            style={{
-              padding: '6px 14px', background: '#475569', color: '#fff', border: 'none',
-              borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-            }}
-          >
-            Cancel
-          </button>
+          <button onClick={handleConfirm} style={{
+            padding: '6px 14px', background: '#dc2626', color: '#fff', border: 'none',
+            borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: 'pointer',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          }}>Confirm</button>
+          <button onClick={handleCancel} style={{
+            padding: '6px 14px', background: '#475569', color: '#fff', border: 'none',
+            borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: 'pointer',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          }}>Cancel</button>
         </>
       )}
     </div>
@@ -163,18 +125,14 @@ export default function DeadZoneDrawer({ active, spots, onMarkDeadZones, onDone 
 }
 
 function isPointInPolygon(point, polygon) {
-  const x = point.lat;
-  const y = point.lng;
+  const x = point.lat, y = point.lng;
   let inside = false;
-
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
     const xi = polygon[i].lat, yi = polygon[i].lng;
     const xj = polygon[j].lat, yj = polygon[j].lng;
-
     const intersect = ((yi > y) !== (yj > y)) &&
       (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
     if (intersect) inside = !inside;
   }
-
   return inside;
 }
