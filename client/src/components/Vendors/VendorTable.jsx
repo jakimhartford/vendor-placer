@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { TIER_COLORS, EMPTY_COLOR } from '../../utils/tierColors.js';
 import { generateShareLink } from '../../api/index.js';
 
@@ -20,6 +20,8 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
   const [copiedVendorId, setCopiedVendorId] = useState(null);
   const [editingBidId, setEditingBidId] = useState(null);
   const [bidValue, setBidValue] = useState('');
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(15);
 
   // Build vendorId -> { spotId, spotLabel, allSpots } map
   const vendorSpotMap = useMemo(() => {
@@ -105,6 +107,12 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
       return 0;
     });
   }, [vendors, sortKey, sortDir, search, vendorSpotMap, filterUnplaced]);
+
+  // Reset to first page when filters/sort change
+  useEffect(() => { setPage(0); }, [search, filterUnplaced, sortKey, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginated = filtered.slice(page * pageSize, (page + 1) * pageSize);
 
   const handleSort = (key) => {
     if (key === sortKey) {
@@ -203,7 +211,7 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
             </tr>
           </thead>
           <tbody>
-            {filtered.map((v, idx) => {
+            {paginated.map((v, idx) => {
               const spotInfo = vendorSpotMap[v.id];
               const isPlaced = !!spotInfo;
               const hasConflicts = v.conflicts?.length > 0;
@@ -394,6 +402,52 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
           </tbody>
         </table>
       </div>
+      {/* Pagination controls */}
+      {filtered.length > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginTop: 6, padding: '4px 0', fontSize: 11, color: '#94a3b8',
+        }}>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button
+              disabled={page === 0}
+              onClick={() => setPage((p) => p - 1)}
+              style={{
+                background: '#1e293b', border: '1px solid #334155', borderRadius: 4,
+                color: page === 0 ? '#475569' : '#e2e8f0', cursor: page === 0 ? 'default' : 'pointer',
+                padding: '2px 8px', fontSize: 11,
+              }}
+            >
+              Prev
+            </button>
+            <button
+              disabled={page >= totalPages - 1}
+              onClick={() => setPage((p) => p + 1)}
+              style={{
+                background: '#1e293b', border: '1px solid #334155', borderRadius: 4,
+                color: page >= totalPages - 1 ? '#475569' : '#e2e8f0',
+                cursor: page >= totalPages - 1 ? 'default' : 'pointer',
+                padding: '2px 8px', fontSize: 11,
+              }}
+            >
+              Next
+            </button>
+          </div>
+          <span>Page {page + 1} of {totalPages}</span>
+          <select
+            value={pageSize}
+            onChange={(e) => { setPageSize(Number(e.target.value)); setPage(0); }}
+            style={{
+              background: '#1e293b', color: '#e2e8f0', border: '1px solid #334155',
+              borderRadius: 4, padding: '2px 4px', fontSize: 11,
+            }}
+          >
+            <option value={15}>15</option>
+            <option value={30}>30</option>
+            <option value={50}>50</option>
+          </select>
+        </div>
+      )}
     </div>
   );
 }

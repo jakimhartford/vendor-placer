@@ -120,8 +120,9 @@ export default function PlacementControls({
         <button
           onClick={() => setShowStreetTools(!showStreetTools)}
           style={{
-            background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer',
-            fontSize: 11, padding: 0, fontWeight: 600, marginBottom: 6, display: 'block',
+            background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer',
+            fontSize: 13, padding: 0, fontWeight: 600, marginBottom: 6, display: 'block',
+            letterSpacing: '0.02em', textTransform: 'uppercase',
           }}
         >
           {showStreetTools ? '▾' : '▸'} Street & Spot Tools
@@ -244,8 +245,9 @@ export default function PlacementControls({
             onClick={() => setShowZonesAmenities(!showZonesAmenities)}
             data-tour="dead-zones"
             style={{
-              background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer',
-              fontSize: 11, padding: 0, fontWeight: 600,
+              background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer',
+              fontSize: 13, padding: 0, fontWeight: 600,
+              letterSpacing: '0.02em', textTransform: 'uppercase',
             }}
           >
             {showZonesAmenities ? '▾' : '▸'} Zones & Amenities
@@ -380,11 +382,13 @@ export default function PlacementControls({
           style={{
             background: 'none',
             border: 'none',
-            color: '#94a3b8',
+            color: '#cbd5e1',
             cursor: 'pointer',
-            fontSize: 11,
+            fontSize: 13,
             padding: 0,
             fontWeight: 600,
+            letterSpacing: '0.02em',
+            textTransform: 'uppercase',
           }}
         >
           {showRules ? '▾' : '▸'} Adjacency Rules
