@@ -7,7 +7,7 @@ const DEFAULT_CATEGORIES = ['food', 'art', 'craft', 'jewelry', 'clothing', 'serv
 const inputStyle = {
   width: '100%', padding: '8px 12px', fontSize: 14,
   border: '1px solid #cbd5e1', borderRadius: 6, boxSizing: 'border-box',
-  marginBottom: 8,
+  marginBottom: 8, color: '#1e293b', background: '#fff',
 };
 
 const btnStyle = {
@@ -241,7 +241,7 @@ export default function VendorPortal() {
     return (
       <div style={{ minHeight: '100vh', background: '#f8fafc', padding: '40px 20px' }}>
         <div style={{ maxWidth: 600, margin: '0 auto' }}>
-          <h1 style={{ fontSize: 24, marginBottom: 4 }}>{vendorData.projectName}</h1>
+          <h1 style={{ fontSize: 24, marginBottom: 4, color: '#0f172a' }}>{vendorData.projectName}</h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
             <span style={{
               padding: '4px 12px', borderRadius: 9999, fontSize: 12, fontWeight: 700, color: '#fff',
@@ -342,8 +342,8 @@ export default function VendorPortal() {
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', padding: '40px 20px' }}>
       <div style={{ maxWidth: 600, margin: '0 auto' }}>
-        <h1 style={{ fontSize: 28, marginBottom: 4 }}>{portalInfo?.projectName}</h1>
-        <p style={{ color: '#64748b', fontSize: 14, marginBottom: 20 }}>Vendor Application</p>
+        <h1 style={{ fontSize: 28, marginBottom: 4, color: '#0f172a' }}>{portalInfo?.projectName}</h1>
+        <p style={{ color: '#475569', fontSize: 14, marginBottom: 20 }}>Vendor Application</p>
 
         {portalInfo?.instructions && (
           <div style={{ background: '#eff6ff', borderRadius: 8, padding: 16, marginBottom: 20, fontSize: 14, color: '#1e40af', border: '1px solid #bfdbfe' }}>
@@ -392,33 +392,33 @@ export default function VendorPortal() {
         )}
 
         <form onSubmit={handleSubmit}>
-          <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 4 }}>Name *</label>
+          <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 4, color: '#1e293b' }}>Name *</label>
           <input required value={form.name} onChange={updateField('name')} style={inputStyle} />
 
-          <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 4 }}>Category</label>
+          <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 4, color: '#1e293b' }}>Category</label>
           <select value={form.category} onChange={updateField('category')} style={inputStyle}>
             {(portalInfo?.categories?.length ? portalInfo.categories : DEFAULT_CATEGORIES).map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
 
-          <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 4 }}>Email</label>
+          <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 4, color: '#1e293b' }}>Email</label>
           <input type="email" value={form.email} onChange={updateField('email')} style={inputStyle} />
 
-          <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 4 }}>Phone</label>
+          <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 4, color: '#1e293b' }}>Phone</label>
           <input value={form.phone} onChange={updateField('phone')} style={inputStyle} />
 
-          <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 4 }}>Business Name</label>
+          <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 4, color: '#1e293b' }}>Business Name</label>
           <input value={form.businessName} onChange={updateField('businessName')} style={inputStyle} />
 
-          <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 4 }}>Description</label>
+          <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 4, color: '#1e293b' }}>Description</label>
           <textarea value={form.description} onChange={updateField('description')} rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
 
-          <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 4 }}>Booth Size (spots needed)</label>
+          <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 4, color: '#1e293b' }}>Booth Size (spots needed)</label>
           <input type="number" min={1} max={4} value={form.boothSize} onChange={(e) => setForm((f) => ({ ...f, boothSize: parseInt(e.target.value) || 1 }))} style={inputStyle} />
 
-          <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 4 }}>Power Needs</label>
+          <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 4, color: '#1e293b' }}>Power Needs</label>
           <input value={form.powerNeeds} onChange={updateField('powerNeeds')} placeholder="e.g., 110V, 220V, none" style={inputStyle} />
 
-          <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 4 }}>Setup Requirements</label>
+          <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 4, color: '#1e293b' }}>Setup Requirements</label>
           <textarea value={form.setupRequirements} onChange={updateField('setupRequirements')} rows={2} style={{ ...inputStyle, resize: 'vertical' }} placeholder="Special requirements, dimensions, etc." />
 
           {portalInfo?.mapReady && portalInfo.availableSpots?.length > 0 && (
