@@ -141,14 +141,37 @@ export default function MapView({
               )}
             </Marker>
             {isSelected && (
-              <ZoneHandles
-                polygon={dz.polygon}
-                color="#dc2626"
-                onUpdate={(newPolygon) => {
-                  if (onUpdateDeadZone) onUpdateDeadZone(dz.id, { polygon: newPolygon });
-                }}
-                onClose={() => setSelectedDeadZoneId(null)}
-              />
+              <>
+                <ZoneHandles
+                  polygon={dz.polygon}
+                  color="#dc2626"
+                  onUpdate={(newPolygon) => {
+                    if (onUpdateDeadZone) onUpdateDeadZone(dz.id, { polygon: newPolygon });
+                  }}
+                  onClose={() => setSelectedDeadZoneId(null)}
+                />
+                <Marker
+                  position={center}
+                  icon={L.divIcon({
+                    className: '',
+                    html: `<div style="
+                      background:#dc2626;color:#fff;padding:4px 12px;border-radius:4px;
+                      font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;
+                      box-shadow:0 2px 6px rgba(0,0,0,0.3);text-align:center;
+                    ">🗑 Remove</div>`,
+                    iconSize: [80, 24],
+                    iconAnchor: [40, -8],
+                  })}
+                  zIndexOffset={2000}
+                  eventHandlers={{
+                    click: (e) => {
+                      L.DomEvent.stopPropagation(e);
+                      setSelectedDeadZoneId(null);
+                      onRemoveDeadZone(dz.id);
+                    },
+                  }}
+                />
+              </>
             )}
           </React.Fragment>
         );
