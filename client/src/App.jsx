@@ -96,6 +96,7 @@ export default function App() {
     mapZones,
     loadMapZones,
     addMapZone,
+    updateMapZone,
     removeMapZone,
     clearAll: clearMapZones,
     setMapZones,
@@ -367,6 +368,11 @@ export default function App() {
     pushState(captureSnapshot());
     await addMapZone(zoneData);
   }, [addMapZone, pushState, captureSnapshot]);
+
+  const handleUpdateMapZone = useCallback(async (id, data) => {
+    pushState(captureSnapshot());
+    await updateMapZone(id, data);
+  }, [updateMapZone, pushState, captureSnapshot]);
 
   const handleMapZoneDrawDone = useCallback(() => {
     setActiveElement(null);
@@ -696,6 +702,7 @@ export default function App() {
           mapZoneType={mapZoneType}
           onAddMapZone={handleAddMapZone}
           onDeleteMapZone={removeMapZone}
+          onUpdateMapZone={handleUpdateMapZone}
           onMapZoneDrawDone={handleMapZoneDrawDone}
           mapZonesVisible={mapZonesVisible}
         />
