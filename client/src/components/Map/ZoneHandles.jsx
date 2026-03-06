@@ -4,7 +4,8 @@ import L from 'leaflet';
 
 /**
  * Lucidchart-style selection handles for a polygon zone.
- * Corner handles scale the shape proportionally (opposite corner anchored).
+ * Corner handles scale width & height independently along the rectangle's own axes.
+ * Edge midpoint handles scale a single axis only.
  * Rotation handle (curved arrow) above the top edge.
  */
 export default function ZoneHandles({ polygon, color, onUpdate, onClose }) {
@@ -12,13 +13,14 @@ export default function ZoneHandles({ polygon, color, onUpdate, onClose }) {
   const outlineRef = useRef(null);
   const cornersRef = useRef([...polygon]);
   const handleMarkersRef = useRef([]);
+  const edgeMarkersRef = useRef([]);
   const rotateMarkerRef = useRef(null);
   const rotatingRef = useRef(false);
   const baseAngleRef = useRef(0);
   const baseCornersRef = useRef(null);
-  // For proportional corner scaling
   const dragAnchorRef = useRef(null);
   const dragBaseCornersRef = useRef(null);
+  const dragAxisModeRef = useRef(null); // 'both', 'edge1', 'edge2'
 
   const getCenter = useCallback((pts) => {
     const lat = pts.reduce((s, p) => s + p[0], 0) / pts.length;
@@ -31,7 +33,6 @@ export default function ZoneHandles({ polygon, color, onUpdate, onClose }) {
     const top = pts[topIdx];
     const center = getCenter(pts);
     const dist = Math.abs(top[0] - center[0]);
-    // Small offset just above the top point
     return [top[0] + dist * 0.3 + 0.00008, top[1]];
   }, [getCenter]);
 
@@ -42,7 +43,13 @@ export default function ZoneHandles({ polygon, color, onUpdate, onClose }) {
     iconAnchor: [5, 5],
   });
 
-  // Curved double-sided arrow for rotation
+  const edgeIcon = L.divIcon({
+    className: '',
+    html: `<div style="width:8px;height:8px;background:${color};border:1px solid #fff;cursor:pointer;border-radius:1px;"></div>`,
+    iconSize: [8, 8],
+    iconAnchor: [4, 4],
+  });
+
   const rotateIcon = L.divIcon({
     className: '',
     html: `<div style="
@@ -57,11 +64,67 @@ export default function ZoneHandles({ polygon, color, onUpdate, onClose }) {
     iconAnchor: [10, 10],
   });
 
+  // Get the rectangle's local axes from the anchor corner
+  const getLocalAxes = useCallback((basePts, anchorIdx) => {
+    const anchor = basePts[anchorIdx];
+    const adj1 = basePts[(anchorIdx + 1) % 4];
+    const adj2 = basePts[(anchorIdx + 3) % 4];
+    // axis1: anchor → adj1, axis2: anchor → adj2
+    const len1 = Math.sqrt((adj1[0] - anchor[0]) ** 2 + (adj1[1] - anchor[1]) ** 2);
+    const len2 = Math.sqrt((adj2[0] - anchor[0]) ** 2 + (adj2[1] - anchor[1]) ** 2);
+    const ax1 = len1 > 0 ? [(adj1[0] - anchor[0]) / len1, (adj1[1] - anchor[1]) / len1] : [1, 0];
+    const ax2 = len2 > 0 ? [(adj2[0] - anchor[0]) / len2, (adj2[1] - anchor[1]) / len2] : [0, 1];
+    return { ax1, ax2 };
+  }, []);
+
+  const dot = (a, b) => a[0] * b[0] + a[1] * b[1];
+
+  // Scale along rectangle's local axes — keeps rectangles as rectangles
+  // axisMode: 'both' (corner), 'edge1' (scale along ax1 only), 'edge2' (scale along ax2 only)
+  const scalePts = useCallback((basePts, anchorIdx, dragIdx, newDragPos, axisMode) => {
+    const anchor = basePts[anchorIdx];
+    const oldDrag = basePts[dragIdx];
+    const { ax1, ax2 } = getLocalAxes(basePts, anchorIdx);
+
+    const oldVec = [oldDrag[0] - anchor[0], oldDrag[1] - anchor[1]];
+    const newVec = [newDragPos[0] - anchor[0], newDragPos[1] - anchor[1]];
+
+    const oldProj1 = dot(oldVec, ax1);
+    const oldProj2 = dot(oldVec, ax2);
+    const newProj1 = dot(newVec, ax1);
+    const newProj2 = dot(newVec, ax2);
+
+    let sx = oldProj1 !== 0 ? newProj1 / oldProj1 : 1;
+    let sy = oldProj2 !== 0 ? newProj2 / oldProj2 : 1;
+
+    // Constrain axis based on mode
+    if (axisMode === 'edge1') sy = 1;
+    if (axisMode === 'edge2') sx = 1;
+
+    return basePts.map(([lat, lng]) => {
+      const v = [lat - anchor[0], lng - anchor[1]];
+      const p1 = dot(v, ax1);
+      const p2 = dot(v, ax2);
+      return [
+        anchor[0] + sx * p1 * ax1[0] + sy * p2 * ax2[0],
+        anchor[1] + sx * p1 * ax1[1] + sy * p2 * ax2[1],
+      ];
+    });
+  }, [getLocalAxes]);
+
+  const getMidpoint = (p1, p2) => [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2];
+
   const updateVisuals = useCallback(() => {
     const pts = cornersRef.current;
     if (outlineRef.current) outlineRef.current.setLatLngs(pts);
     handleMarkersRef.current.forEach((m, i) => {
       if (pts[i]) m.setLatLng(pts[i]);
+    });
+    // Update edge midpoint markers
+    edgeMarkersRef.current.forEach((m, i) => {
+      const p1 = pts[i];
+      const p2 = pts[(i + 1) % 4];
+      if (p1 && p2) m.setLatLng(getMidpoint(p1, p2));
     });
     const rotPos = getRotateHandlePos(pts);
     if (rotateMarkerRef.current) rotateMarkerRef.current.setLatLng(rotPos);
@@ -81,24 +144,6 @@ export default function ZoneHandles({ polygon, color, onUpdate, onClose }) {
     });
   }, []);
 
-  // Scale polygon uniformly: anchor is the opposite corner, use a single scale
-  // factor based on distance ratio so rectangles stay as rectangles.
-  const scalePts = useCallback((basePts, anchorIdx, dragIdx, newDragPos) => {
-    const anchor = basePts[anchorIdx];
-    const oldDrag = basePts[dragIdx];
-    const oldDist = Math.sqrt(
-      (oldDrag[0] - anchor[0]) ** 2 + (oldDrag[1] - anchor[1]) ** 2
-    );
-    const newDist = Math.sqrt(
-      (newDragPos[0] - anchor[0]) ** 2 + (newDragPos[1] - anchor[1]) ** 2
-    );
-    const scale = oldDist !== 0 ? newDist / oldDist : 1;
-    return basePts.map(([lat, lng]) => [
-      anchor[0] + (lat - anchor[0]) * scale,
-      anchor[1] + (lng - anchor[1]) * scale,
-    ]);
-  }, []);
-
   useEffect(() => {
     if (!map || !polygon?.length) return;
 
@@ -109,7 +154,7 @@ export default function ZoneHandles({ polygon, color, onUpdate, onClose }) {
       color, weight: 1.5, fill: false, dashArray: '4,3', interactive: false,
     }).addTo(map);
 
-    // Corner handles — proportional scaling
+    // Corner handles — independent scaling along local axes
     polygon.forEach((pt, idx) => {
       const marker = L.marker(pt, {
         draggable: true,
@@ -122,6 +167,7 @@ export default function ZoneHandles({ polygon, color, onUpdate, onClose }) {
       marker.on('dragstart', () => {
         dragAnchorRef.current = oppositeIdx;
         dragBaseCornersRef.current = [...cornersRef.current];
+        dragAxisModeRef.current = 'both';
       });
 
       marker.on('drag', (e) => {
@@ -132,6 +178,7 @@ export default function ZoneHandles({ polygon, color, onUpdate, onClose }) {
           dragAnchorRef.current,
           idx,
           [ll.lat, ll.lng],
+          dragAxisModeRef.current,
         );
         updateVisuals();
       });
@@ -139,11 +186,74 @@ export default function ZoneHandles({ polygon, color, onUpdate, onClose }) {
       marker.on('dragend', () => {
         dragAnchorRef.current = null;
         dragBaseCornersRef.current = null;
+        dragAxisModeRef.current = null;
         onUpdate([...cornersRef.current]);
       });
 
       handleMarkersRef.current.push(marker);
     });
+
+    // Edge midpoint handles — single-axis scaling
+    for (let i = 0; i < 4; i++) {
+      const p1 = polygon[i];
+      const p2 = polygon[(i + 1) % 4];
+      const mid = getMidpoint(p1, p2);
+
+      const edgeMarker = L.marker(mid, {
+        draggable: true,
+        icon: edgeIcon,
+        zIndexOffset: 999,
+      }).addTo(map);
+
+      // Opposite edge midpoint index: edge i has opposite edge (i+2)%4
+      // Anchor is the midpoint of the opposite edge
+      // For edge between corners [i, i+1], the opposite edge is between [(i+2), (i+3)]
+      // The axis to scale along is perpendicular to this edge (i.e. the other axis)
+      const edgeIdx = i;
+
+      edgeMarker.on('dragstart', () => {
+        dragBaseCornersRef.current = [...cornersRef.current];
+        // For edge between corners i and i+1:
+        // The anchor is the opposite corner (i+2)
+        // Scale only along axis2 (perpendicular to the edge being dragged)
+        const oppIdx = (edgeIdx + 2) % 4;
+        dragAnchorRef.current = oppIdx;
+        // Edge between i and i+1 lies along ax1 from corner i's perspective
+        // So dragging this edge should scale along ax2 (perpendicular)
+        // But from opposite corner's perspective, the naming flips:
+        // anchor is oppIdx, adj1 is (oppIdx+1)%4, so ax1 is the edge direction of opposite edge
+        // We want to scale perpendicular to the dragged edge = along ax2 from anchor's frame
+        // Actually: edge i..i+1 is parallel to edge (i+2)..(i+3)
+        // From anchor (i+2), ax1 goes to (i+3), ax2 goes to (i+1)
+        // The edge we're dragging (i..i+1) is perpendicular to ax2 from anchor
+        // So we scale along ax2 only
+        dragAxisModeRef.current = 'edge2';
+      });
+
+      edgeMarker.on('drag', (e) => {
+        if (dragBaseCornersRef.current == null) return;
+        const ll = e.target.getLatLng();
+        // Use the dragged corner index closest to this edge as the drag reference
+        const dragRefIdx = edgeIdx;
+        cornersRef.current = scalePts(
+          dragBaseCornersRef.current,
+          dragAnchorRef.current,
+          dragRefIdx,
+          [ll.lat, ll.lng],
+          dragAxisModeRef.current,
+        );
+        updateVisuals();
+      });
+
+      edgeMarker.on('dragend', () => {
+        dragAnchorRef.current = null;
+        dragBaseCornersRef.current = null;
+        dragAxisModeRef.current = null;
+        onUpdate([...cornersRef.current]);
+      });
+
+      edgeMarkersRef.current.push(edgeMarker);
+    }
 
     // Rotation handle
     const rotPos = getRotateHandlePos(polygon);
@@ -189,6 +299,8 @@ export default function ZoneHandles({ polygon, color, onUpdate, onClose }) {
       document.removeEventListener('keydown', onKeyDown);
       handleMarkersRef.current.forEach((m) => map.removeLayer(m));
       handleMarkersRef.current = [];
+      edgeMarkersRef.current.forEach((m) => map.removeLayer(m));
+      edgeMarkersRef.current = [];
       if (outlineRef.current) map.removeLayer(outlineRef.current);
       outlineRef.current = null;
       if (rotateMarkerRef.current) map.removeLayer(rotateMarkerRef.current);

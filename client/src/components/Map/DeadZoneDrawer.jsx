@@ -1,158 +1,55 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
-import L from 'leaflet';
 
-const DEFAULT_WIDTH_FT = 20;
-const WIDTH_STEP = 5;
-const MIN_WIDTH = 5;
-const MAX_WIDTH = 200;
+const DEFAULT_SIZE_FT = 20;
 const FT_TO_DEG_LAT = 0.0000027;
 const FT_TO_DEG_LNG = 0.0000034;
-const MIN_DRAG_PX = 5;
 
+/**
+ * Click on the map to place a default dead zone rectangle.
+ * User can then select it and resize/rotate via ZoneHandles.
+ */
 export default function DeadZoneDrawer({ active, onAddDeadZone, onDone }) {
   const map = useMap();
-  const drawingRef = useRef(false);
-  const p1Ref = useRef(null);
-  const p2Ref = useRef(null);
-  const startScreenRef = useRef(null);
-  const widthRef = useRef(DEFAULT_WIDTH_FT);
-  const previewRef = useRef(null);
-  const [widthFt, setWidthFt] = useState(DEFAULT_WIDTH_FT);
 
-  const buildRect = useCallback((p1, p2, wFt) => {
-    const dx = p2.lng - p1.lng;
-    const dy = p2.lat - p1.lat;
-    const len = Math.sqrt(dx * dx + dy * dy);
-    if (len === 0) return null;
-
-    const halfW_lat = (wFt / 2) * FT_TO_DEG_LAT;
-    const halfW_lng = (wFt / 2) * FT_TO_DEG_LNG;
-    const nx = -dy / len * halfW_lng;
-    const ny = dx / len * halfW_lat;
-
+  const buildDefaultRect = useCallback((center) => {
+    const halfLat = (DEFAULT_SIZE_FT / 2) * FT_TO_DEG_LAT;
+    const halfLng = (DEFAULT_SIZE_FT / 2) * FT_TO_DEG_LNG;
     return [
-      [p1.lat + ny, p1.lng + nx],
-      [p2.lat + ny, p2.lng + nx],
-      [p2.lat - ny, p2.lng - nx],
-      [p1.lat - ny, p1.lng - nx],
+      [center.lat + halfLat, center.lng - halfLng],
+      [center.lat + halfLat, center.lng + halfLng],
+      [center.lat - halfLat, center.lng + halfLng],
+      [center.lat - halfLat, center.lng - halfLng],
     ];
   }, []);
 
-  const updatePreview = useCallback(() => {
-    if (!p1Ref.current || !p2Ref.current) return;
-    const corners = buildRect(p1Ref.current, p2Ref.current, widthRef.current);
-    if (!corners) return;
-
-    if (previewRef.current) {
-      previewRef.current.setLatLngs(corners);
-    } else {
-      previewRef.current = L.polygon(corners, {
-        color: '#dc2626', weight: 2, fillColor: '#dc2626', fillOpacity: 0.25,
-        dashArray: '6,4',
-      }).addTo(map);
-    }
-  }, [map, buildRect]);
-
-  const clearPreview = useCallback(() => {
-    if (previewRef.current && map) map.removeLayer(previewRef.current);
-    previewRef.current = null;
-  }, [map]);
-
-  const cancelDraw = useCallback(() => {
-    drawingRef.current = false;
-    p1Ref.current = null;
-    p2Ref.current = null;
-    startScreenRef.current = null;
-    widthRef.current = DEFAULT_WIDTH_FT;
-    setWidthFt(DEFAULT_WIDTH_FT);
-    clearPreview();
-  }, [clearPreview]);
-
   useEffect(() => {
-    if (!map || !active) {
-      cancelDraw();
-      return;
-    }
+    if (!map || !active) return;
 
     const container = map.getContainer();
     container.style.cursor = 'crosshair';
     map.dragging.disable();
-    map.scrollWheelZoom.disable();
 
-    const onMouseDown = (e) => {
-      if (drawingRef.current) return;
-      drawingRef.current = true;
-      p1Ref.current = e.latlng;
-      p2Ref.current = e.latlng;
-      startScreenRef.current = e.containerPoint;
-      widthRef.current = DEFAULT_WIDTH_FT;
-      setWidthFt(DEFAULT_WIDTH_FT);
-    };
-
-    const onMouseMove = (e) => {
-      if (!drawingRef.current || !p1Ref.current) return;
-      p2Ref.current = e.latlng;
-      updatePreview();
-    };
-
-    const onWheel = (e) => {
-      if (!drawingRef.current) return;
-      e.preventDefault();
-      e.stopPropagation();
-      const delta = e.deltaY < 0 ? WIDTH_STEP : -WIDTH_STEP;
-      widthRef.current = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, widthRef.current + delta));
-      setWidthFt(widthRef.current);
-      updatePreview();
-    };
-
-    const onMouseUp = async (e) => {
-      if (!drawingRef.current || !p1Ref.current) return;
-
-      const dx = e.containerPoint.x - startScreenRef.current.x;
-      const dy = e.containerPoint.y - startScreenRef.current.y;
-      if (Math.sqrt(dx * dx + dy * dy) < MIN_DRAG_PX) {
-        cancelDraw();
-        return;
-      }
-
-      const corners = buildRect(p1Ref.current, e.latlng, widthRef.current);
-
-      clearPreview();
-      drawingRef.current = false;
-      p1Ref.current = null;
-      p2Ref.current = null;
-      startScreenRef.current = null;
-
-      if (!corners) return;
-
+    const onClick = async (e) => {
+      const corners = buildDefaultRect(e.latlng);
       if (onAddDeadZone) await onAddDeadZone(corners);
       if (onDone) onDone();
     };
 
     const onKeyDown = (e) => {
-      if (e.key === 'Escape' && drawingRef.current) {
-        cancelDraw();
-      }
+      if (e.key === 'Escape' && onDone) onDone();
     };
 
-    map.on('mousedown', onMouseDown);
-    map.on('mousemove', onMouseMove);
-    map.on('mouseup', onMouseUp);
-    container.addEventListener('wheel', onWheel, { passive: false });
+    map.on('click', onClick);
     document.addEventListener('keydown', onKeyDown);
 
     return () => {
-      map.off('mousedown', onMouseDown);
-      map.off('mousemove', onMouseMove);
-      map.off('mouseup', onMouseUp);
-      container.removeEventListener('wheel', onWheel);
+      map.off('click', onClick);
       document.removeEventListener('keydown', onKeyDown);
       container.style.cursor = '';
       map.dragging.enable();
-      map.scrollWheelZoom.enable();
     };
-  }, [map, active]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [map, active, buildDefaultRect, onAddDeadZone, onDone]);
 
   if (!active) return null;
 
@@ -167,9 +64,7 @@ export default function DeadZoneDrawer({ active, onAddDeadZone, onDone }) {
         background: '#dc2626', color: '#fff', padding: '6px 16px', borderRadius: 6,
         fontWeight: 600, fontSize: 13, boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
       }}>
-        {drawingRef.current
-          ? `Width: ${widthFt}ft — scroll to adjust`
-          : 'Click and drag to draw dead zone'}
+        Click to place dead zone — resize after
       </div>
     </div>
   );
