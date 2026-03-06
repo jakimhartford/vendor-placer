@@ -165,6 +165,7 @@ export default function PlacementControls({
                 disabled={loading}
                 onClick={() => onToggleStreetDraw({ spotSizeFt, spacingFt })}
                 data-tour="draw-street"
+                title={streetDrawMode ? 'Cancel street drawing' : 'Draw a line on the map to generate vendor spots'}
                 style={{
                   flex: 1,
                   background: streetDrawMode ? '#dc2626' : '#facc15',
@@ -179,6 +180,7 @@ export default function PlacementControls({
                 disabled={loading}
                 onClick={onToggleSpotPlace}
                 data-tour="place-spot"
+                title={spotPlaceMode ? 'Stop placing individual spots' : 'Click on map to place individual spots'}
                 style={{
                   flex: 1,
                   background: spotPlaceMode ? '#dc2626' : '#22d3ee',
@@ -195,6 +197,7 @@ export default function PlacementControls({
               <button
                 className="btn"
                 onClick={onDeleteSelected}
+                title="Delete all selected spots"
                 style={{
                   marginTop: 6,
                   background: '#f97316',
@@ -215,6 +218,7 @@ export default function PlacementControls({
                   className="btn btn-secondary"
                   style={{ padding: '2px 8px', fontSize: 11, width: 'auto', marginBottom: 0 }}
                   onClick={onClearPaths}
+                  title="Remove all drawn street lines"
                 >
                   Clear Lines
                 </button>
@@ -226,6 +230,7 @@ export default function PlacementControls({
                 className="btn btn-secondary"
                 disabled={loading}
                 onClick={onClearGrid}
+                title="Remove all spots and drawn lines"
                 style={{ marginTop: 4, marginBottom: 0 }}
               >
                 Clear All Spots
@@ -350,6 +355,7 @@ export default function PlacementControls({
         disabled={loading}
         onClick={handleRunPlacement}
         data-tour="run-placement"
+        title="Auto-assign vendors to spots using placement rules"
       >
         {loading ? 'Running...' : 'Run Placement'}
       </button>
@@ -360,6 +366,7 @@ export default function PlacementControls({
           className="btn btn-danger"
           disabled={loading}
           onClick={onClearVendors}
+          title="Remove all vendors and their placements"
         >
           Clear Vendors
         </button>

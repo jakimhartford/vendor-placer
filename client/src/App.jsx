@@ -8,6 +8,7 @@ import useUndoRedo from './hooks/useUndoRedo.js';
 import MapView from './components/Map/MapView.jsx';
 import CsvUploader from './components/Vendors/CsvUploader.jsx';
 import VendorTable from './components/Vendors/VendorTable.jsx';
+import CollapsibleSection from './components/Vendors/CollapsibleSection.jsx';
 import PlacementControls from './components/Placement/PlacementControls.jsx';
 import PlacementStats from './components/Placement/PlacementStats.jsx';
 import ProjectBar from './components/Projects/ProjectBar.jsx';
@@ -554,14 +555,12 @@ export default function App() {
           />
         </div>
 
-        <div className="sidebar-section">
-          <h3>Upload Vendors</h3>
+        <CollapsibleSection title="Upload Vendors">
           <CsvUploader onUpload={uploadCsv} loading={vendorsLoading} />
           {vendorsError && <p className="error-msg">{vendorsError}</p>}
-        </div>
+        </CollapsibleSection>
 
-        <div className="sidebar-section">
-          <h3>Actions</h3>
+        <CollapsibleSection title="Actions">
           <PlacementControls
             onRunPlacement={(settings) => { pushState(captureSnapshot()); runPlacement(settings); }}
             onClearVendors={handleClearVendors}
@@ -599,10 +598,9 @@ export default function App() {
             deadZoneCount={deadZones?.length || 0}
             onClearDeadZones={clearDeadZones}
           />
-        </div>
+        </CollapsibleSection>
 
-        <div className="sidebar-section">
-          <h3>Results & Export</h3>
+        <CollapsibleSection title="Results & Export">
           <PlacementStats placements={placements} vendors={vendors} />
           <ExportPdfButton
             mapRef={mapRef}
@@ -611,10 +609,9 @@ export default function App() {
             assignments={placements.assignments}
             pricingConfig={pricingConfig}
           />
-        </div>
+        </CollapsibleSection>
 
-        <div className="sidebar-section" data-tour="pricing-revenue">
-          <h3>Pricing & Revenue</h3>
+        <CollapsibleSection title="Pricing & Revenue" dataTour="pricing-revenue">
           <PricingConfig config={pricingConfig} onChange={setPricingConfig} />
           <RevenueSummary
             spots={spots}
@@ -622,20 +619,18 @@ export default function App() {
             assignments={placements.assignments}
             pricingConfig={pricingConfig}
           />
-        </div>
+        </CollapsibleSection>
 
-        <div className="sidebar-section" data-tour="logistics">
-          <h3>Logistics</h3>
+        <CollapsibleSection title="Logistics" dataTour="logistics">
           <LogisticsPanel
             accessPoints={accessPoints}
             timeWindows={timeWindows}
             onAddTimeWindow={addTimeWindow}
             onDeleteTimeWindow={removeTimeWindow}
           />
-        </div>
+        </CollapsibleSection>
 
-        <div className="sidebar-section">
-          <h3>Spots</h3>
+        <CollapsibleSection title="Spots" defaultOpen={false}>
           <SpotTable
             spots={spots}
             vendors={vendors}
@@ -643,10 +638,9 @@ export default function App() {
             onEditSpot={handleEditSpotById}
             pricingConfig={pricingConfig}
           />
-        </div>
+        </CollapsibleSection>
 
-        <div className="sidebar-section">
-          <h3>Vendors</h3>
+        <CollapsibleSection title="Vendors" defaultOpen={false}>
           <VendorTable
             vendors={vendors}
             assignments={placements.assignments}
@@ -656,7 +650,7 @@ export default function App() {
             currentProjectId={currentProjectId}
             onUpdateVendor={updateVendor}
           />
-        </div>
+        </CollapsibleSection>
       </aside>
 
       <main className="map-area">

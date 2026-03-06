@@ -81,20 +81,21 @@ export default function ZoneHandles({ polygon, color, onUpdate, onClose }) {
     });
   }, []);
 
-  // Scale polygon proportionally: anchor is the opposite corner, dragged corner
-  // moves to new position, all other corners scale relative to anchor.
+  // Scale polygon uniformly: anchor is the opposite corner, use a single scale
+  // factor based on distance ratio so rectangles stay as rectangles.
   const scalePts = useCallback((basePts, anchorIdx, dragIdx, newDragPos) => {
     const anchor = basePts[anchorIdx];
     const oldDrag = basePts[dragIdx];
-    const oldDx = oldDrag[1] - anchor[1];
-    const oldDy = oldDrag[0] - anchor[0];
-    const newDx = newDragPos[1] - anchor[1];
-    const newDy = newDragPos[0] - anchor[0];
-    const sx = oldDx !== 0 ? newDx / oldDx : 1;
-    const sy = oldDy !== 0 ? newDy / oldDy : 1;
+    const oldDist = Math.sqrt(
+      (oldDrag[0] - anchor[0]) ** 2 + (oldDrag[1] - anchor[1]) ** 2
+    );
+    const newDist = Math.sqrt(
+      (newDragPos[0] - anchor[0]) ** 2 + (newDragPos[1] - anchor[1]) ** 2
+    );
+    const scale = oldDist !== 0 ? newDist / oldDist : 1;
     return basePts.map(([lat, lng]) => [
-      anchor[0] + (lat - anchor[0]) * sy,
-      anchor[1] + (lng - anchor[1]) * sx,
+      anchor[0] + (lat - anchor[0]) * scale,
+      anchor[1] + (lng - anchor[1]) * scale,
     ]);
   }, []);
 

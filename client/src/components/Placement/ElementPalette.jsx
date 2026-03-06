@@ -50,28 +50,28 @@ export default function ElementPalette({
 
       {/* Visibility toggles & clear buttons */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
-        <label style={{ fontSize: 10, color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+        <label style={{ fontSize: 10, color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }} title="Toggle amenity layer visibility">
           <input type="checkbox" checked={amenitiesVisible} onChange={onToggleAmenitiesVisible} />
           Amenities{amenityCount > 0 ? ` (${amenityCount})` : ''}
         </label>
         {amenityCount > 0 && (
-          <button className="btn btn-secondary" style={{ padding: '2px 6px', fontSize: 9, width: 'auto', marginBottom: 0 }} onClick={onClearAmenities}>
+          <button className="btn btn-secondary" title="Remove all amenities" style={{ padding: '2px 6px', fontSize: 9, width: 'auto', marginBottom: 0 }} onClick={onClearAmenities}>
             Clear
           </button>
         )}
 
-        <label style={{ fontSize: 10, color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+        <label style={{ fontSize: 10, color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }} title="Toggle zone layer visibility">
           <input type="checkbox" checked={mapZonesVisible} onChange={onToggleMapZonesVisible} />
           Zones{mapZoneCount > 0 ? ` (${mapZoneCount})` : ''}
         </label>
         {mapZoneCount > 0 && (
-          <button className="btn btn-secondary" style={{ padding: '2px 6px', fontSize: 9, width: 'auto', marginBottom: 0 }} onClick={onClearMapZones}>
+          <button className="btn btn-secondary" title="Remove all map zones" style={{ padding: '2px 6px', fontSize: 9, width: 'auto', marginBottom: 0 }} onClick={onClearMapZones}>
             Clear
           </button>
         )}
 
         {deadZoneCount > 0 && (
-          <button className="btn btn-secondary" style={{ padding: '2px 6px', fontSize: 9, width: 'auto', marginBottom: 0 }} onClick={onClearDeadZones}>
+          <button className="btn btn-secondary" title="Remove all dead zones" style={{ padding: '2px 6px', fontSize: 9, width: 'auto', marginBottom: 0 }} onClick={onClearDeadZones}>
             Clear Dead Zones ({deadZoneCount})
           </button>
         )}
