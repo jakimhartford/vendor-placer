@@ -495,6 +495,10 @@ export default function App() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Don't trigger shortcuts when typing in inputs
+      const tag = e.target.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
       if (e.key === 'Escape') {
         setMovingVendor(null);
         setSelectedSpotIds(new Set());
@@ -508,10 +512,25 @@ export default function App() {
         e.preventDefault();
         handleRedo();
       }
+      // Delete/Backspace to delete selected spots
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedSpotIds.size > 0) {
+        e.preventDefault();
+        handleDeleteSelected();
+      }
+      // Ctrl/Cmd+A to select all spots
+      if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
+        e.preventDefault();
+        const allIds = new Set(
+          (spots?.features || [])
+            .filter((f) => f.properties?.id && !f.properties?.deadZone)
+            .map((f) => f.properties.id)
+        );
+        setSelectedSpotIds(allIds);
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleUndo, handleRedo]);
+  }, [handleUndo, handleRedo, selectedSpotIds, handleDeleteSelected, spots]);
 
   const loading = vendorsLoading || spotsLoading || placementsLoading || layoutsLoading;
 
@@ -676,6 +695,15 @@ export default function App() {
             onClearMapZones={clearMapZones}
             deadZoneCount={deadZones?.length || 0}
             onClearDeadZones={clearDeadZones}
+            onSelectAll={() => {
+              const allIds = new Set(
+                (spots?.features || [])
+                  .filter((f) => f.properties?.id && !f.properties?.deadZone)
+                  .map((f) => f.properties.id)
+              );
+              setSelectedSpotIds(allIds);
+            }}
+            onClearSelection={() => setSelectedSpotIds(new Set())}
           />
         </CollapsibleSection>
 
@@ -788,6 +816,13 @@ export default function App() {
           onUpdateMapZone={handleUpdateMapZone}
           onMapZoneDrawDone={handleMapZoneDrawDone}
           mapZonesVisible={mapZonesVisible}
+          onBoxSelect={(ids) => {
+            setSelectedSpotIds((prev) => {
+              const next = new Set(prev);
+              ids.forEach((id) => next.add(id));
+              return next;
+            });
+          }}
         />
       </main>
 

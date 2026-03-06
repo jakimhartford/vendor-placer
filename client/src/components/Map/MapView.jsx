@@ -15,6 +15,7 @@ import AccessPointLayer from './AccessPointLayer.jsx';
 import MapZoneLayer from './MapZoneLayer.jsx';
 import MapZoneDrawer from './MapZoneDrawer.jsx';
 import ZoneHandles from './ZoneHandles.jsx';
+import BoxSelect from './BoxSelect.jsx';
 
 function MapSizeInvalidator() {
   const map = useMap();
@@ -41,7 +42,7 @@ export default function MapView({
   amenities, amenityPlaceMode, amenityType, onPlaceAmenity, onDeleteAmenity, amenitiesVisible,
   accessPoints, accessPointPlaceMode, onPlaceAccessPoint, onDeleteAccessPoint,
   mapZones, mapZoneDrawMode, mapZoneType, onAddMapZone, onDeleteMapZone, onUpdateMapZone, onMapZoneDrawDone, mapZonesVisible,
-  mapContainerRef,
+  mapContainerRef, onBoxSelect,
 }) {
   const [mapStyle, setMapStyle] = useState('streets');
   const [selectedDeadZoneId, setSelectedDeadZoneId] = useState(null);
@@ -197,6 +198,17 @@ export default function MapView({
         onDone={onDeadZoneDrawDone}
       />
       <LocationSearch />
+      {selectedSpotIds?.size > 0 && !movingVendor && (
+        <div style={{
+          position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 1000, background: '#f97316', color: '#fff', padding: '8px 20px',
+          borderRadius: 8, fontWeight: 600, fontSize: 13, boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          display: 'flex', alignItems: 'center', gap: 12,
+        }}>
+          <span>{selectedSpotIds.size} spot{selectedSpotIds.size !== 1 ? 's' : ''} selected</span>
+          <span style={{ fontSize: 11, opacity: 0.8 }}>Delete to remove | Esc to deselect</span>
+        </div>
+      )}
       {movingVendor && (
         <div style={{
           position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)',
@@ -212,6 +224,7 @@ export default function MapView({
       <AccessPointLayer accessPoints={accessPoints} onDelete={onDeleteAccessPoint} active={accessPointPlaceMode} onPlace={onPlaceAccessPoint} />
       <MapZoneLayer mapZones={mapZones} onDelete={onDeleteMapZone} onUpdate={onUpdateMapZone} visible={mapZonesVisible} />
       <MapZoneDrawer active={mapZoneDrawMode} zoneType={mapZoneType} onAddMapZone={onAddMapZone} onDone={onMapZoneDrawDone} />
+      <BoxSelect spots={spots} onSelect={onBoxSelect} />
 {editingSpot && editPosition && (
         <SpotEditPopup
           spot={editingSpot}

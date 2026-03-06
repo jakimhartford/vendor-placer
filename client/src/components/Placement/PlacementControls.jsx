@@ -39,6 +39,8 @@ export default function PlacementControls({
   onClearMapZones,
   deadZoneCount,
   onClearDeadZones,
+  onSelectAll,
+  onClearSelection,
 }) {
   const [spotSizeFt, setSpotSizeFt] = useState(12);
   const [spacingFt, setSpacingFt] = useState(4);
@@ -192,22 +194,48 @@ export default function PlacementControls({
               </button>
             </div>
 
-            {/* Multi-select delete */}
-            {selectedSpotIds?.size > 0 && (
+            {/* Selection toolbar */}
+            <div style={{
+              display: 'flex', gap: 4, marginTop: 6, alignItems: 'center', flexWrap: 'wrap',
+            }}>
               <button
-                className="btn"
-                onClick={onDeleteSelected}
-                title="Delete all selected spots"
-                style={{
-                  marginTop: 6,
-                  background: '#f97316',
-                  color: '#fff',
-                  fontWeight: 600,
-                }}
+                className="btn btn-secondary"
+                onClick={onSelectAll}
+                title="Select all spots (Ctrl+A)"
+                style={{ padding: '3px 8px', fontSize: 10, width: 'auto', marginBottom: 0 }}
               >
-                Delete Selected ({selectedSpotIds.size})
+                Select All
               </button>
-            )}
+              {selectedSpotIds?.size > 0 && (
+                <>
+                  <span style={{ fontSize: 10, color: '#f97316', fontWeight: 600 }}>
+                    {selectedSpotIds.size} selected
+                  </span>
+                  <button
+                    className="btn"
+                    onClick={onDeleteSelected}
+                    title="Delete selected spots (Delete key)"
+                    style={{
+                      padding: '3px 8px', fontSize: 10, width: 'auto', marginBottom: 0,
+                      background: '#ef4444', color: '#fff', fontWeight: 600,
+                    }}
+                  >
+                    Delete
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={onClearSelection}
+                    title="Clear selection (Esc)"
+                    style={{ padding: '3px 8px', fontSize: 10, width: 'auto', marginBottom: 0 }}
+                  >
+                    Deselect
+                  </button>
+                </>
+              )}
+            </div>
+            <div style={{ fontSize: 9, color: '#64748b', marginTop: 2 }}>
+              Shift+click spots or Shift+drag box to select. Delete key to remove.
+            </div>
 
             {pathCount > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, marginBottom: 6 }}>
