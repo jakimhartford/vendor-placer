@@ -2,6 +2,7 @@ import { Router } from 'express';
 import crypto from 'crypto';
 import { getSession } from '../state/sessionStore.js';
 import { requireAuth } from '../middleware/auth.js';
+import { recalculateScores } from '../utils/spotScoring.js';
 
 export const logisticsRoutes = Router();
 
@@ -23,6 +24,7 @@ logisticsRoutes.post('/access-points', requireAuth, (req, res) => {
   const session = getSession(req.user.id);
   const ap = { id: crypto.randomUUID(), lat, lng, label: label || 'Access Point', notes: notes || '' };
   session.accessPoints.push(ap);
+  recalculateScores(session);
   return res.json(ap);
 });
 
@@ -32,6 +34,7 @@ logisticsRoutes.delete('/access-points/:id', requireAuth, (req, res) => {
   const idx = session.accessPoints.findIndex((a) => a.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Access point not found' });
   session.accessPoints.splice(idx, 1);
+  recalculateScores(session);
   return res.json({ message: 'Access point deleted', accessPoints: session.accessPoints });
 });
 

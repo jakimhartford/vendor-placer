@@ -1,26 +1,33 @@
 import { Router } from 'express';
-import Project from '../models/Project.js';
+import Event from '../models/Event.js';
+import Layout from '../models/Layout.js';
 import { requireAuth } from '../middleware/auth.js';
 
 export const checkinRoutes = Router();
 
-// GET /api/projects/:id/checkin — project data + check-in state
+// GET /api/events/:id/checkin — event + layout data + check-in state
 checkinRoutes.get('/:id/checkin', requireAuth, async (req, res) => {
   try {
-    const project = await Project.findOne({ _id: req.params.id, owner: req.user.id });
-    if (!project) return res.status(404).json({ error: 'Project not found' });
+    const event = await Event.findOne({ _id: req.params.id, owner: req.user.id });
+    if (!event) return res.status(404).json({ error: 'Event not found' });
 
-    const checkIns = project.checkIns ? Object.fromEntries(project.checkIns) : {};
+    // Load active layout for spots/placements
+    let layout = null;
+    if (event.activeLayoutId) {
+      layout = await Layout.findById(event.activeLayoutId);
+    }
+
+    const checkIns = event.checkIns ? Object.fromEntries(event.checkIns) : {};
 
     return res.json({
       project: {
-        id: project._id,
-        name: project.name,
-        spotsGeoJSON: project.spotsGeoJSON,
-        vendors: project.vendors,
-        placements: project.placements,
-        deadZones: project.deadZones || [],
-        accessPoints: project.accessPoints || [],
+        id: event._id,
+        name: event.name,
+        spotsGeoJSON: layout?.spotsGeoJSON || { type: 'FeatureCollection', features: [] },
+        vendors: event.vendors,
+        placements: layout?.placements || null,
+        deadZones: layout?.deadZones || [],
+        accessPoints: layout?.accessPoints || [],
       },
       checkIns,
     });
@@ -29,49 +36,55 @@ checkinRoutes.get('/:id/checkin', requireAuth, async (req, res) => {
   }
 });
 
-// PATCH /api/projects/:id/checkin/:vendorId — toggle arrival/setup
+// PATCH /api/events/:id/checkin/:vendorId — toggle arrival/setup
 checkinRoutes.patch('/:id/checkin/:vendorId', requireAuth, async (req, res) => {
   try {
-    const project = await Project.findOne({ _id: req.params.id, owner: req.user.id });
-    if (!project) return res.status(404).json({ error: 'Project not found' });
+    const event = await Event.findOne({ _id: req.params.id, owner: req.user.id });
+    if (!event) return res.status(404).json({ error: 'Event not found' });
 
     const { arrived, setupComplete } = req.body;
     const vendorId = req.params.vendorId;
 
-    if (!project.checkIns) project.checkIns = new Map();
+    if (!event.checkIns) event.checkIns = new Map();
 
-    const existing = project.checkIns.get(vendorId) || {};
+    const existing = event.checkIns.get(vendorId) || {};
     if (arrived !== undefined) {
       existing.arrivedAt = arrived ? new Date() : null;
     }
     if (setupComplete !== undefined) {
       existing.setupComplete = setupComplete;
     }
-    project.checkIns.set(vendorId, existing);
+    event.checkIns.set(vendorId, existing);
 
-    await project.save();
+    await event.save();
 
     return res.json({
       vendorId,
       checkIn: existing,
-      checkIns: Object.fromEntries(project.checkIns),
+      checkIns: Object.fromEntries(event.checkIns),
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
 });
 
-// GET /api/projects/:id/checkin/summary
+// GET /api/events/:id/checkin/summary
 checkinRoutes.get('/:id/checkin/summary', requireAuth, async (req, res) => {
   try {
-    const project = await Project.findOne({ _id: req.params.id, owner: req.user.id });
-    if (!project) return res.status(404).json({ error: 'Project not found' });
+    const event = await Event.findOne({ _id: req.params.id, owner: req.user.id });
+    if (!event) return res.status(404).json({ error: 'Event not found' });
 
-    const assignments = project.placements?.assignments || {};
+    // Load active layout for placements
+    let layout = null;
+    if (event.activeLayoutId) {
+      layout = await Layout.findById(event.activeLayoutId);
+    }
+
+    const assignments = layout?.placements?.assignments || {};
     const assignedVendorIds = new Set(Object.values(assignments));
     const total = assignedVendorIds.size;
 
-    const checkIns = project.checkIns ? Object.fromEntries(project.checkIns) : {};
+    const checkIns = event.checkIns ? Object.fromEntries(event.checkIns) : {};
     let arrived = 0;
     let setup = 0;
 

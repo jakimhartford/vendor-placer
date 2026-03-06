@@ -142,7 +142,7 @@ export default function SpotLayer({ spots, vendors, assignments, selectedSpotId,
             <Tooltip sticky>
               <div style={{ fontSize: 12 }}>
                 <strong>{feature.properties?.label || `Spot ${idx + 1}`}</strong>
-                {assignedVendor && (
+                {assignedVendor ? (
                   <>
                     <br />
                     {assignedVendor.name}
@@ -152,7 +152,9 @@ export default function SpotLayer({ spots, vendors, assignments, selectedSpotId,
                       {assignedVendor.tier}
                     </span>
                   </>
-                )}
+                ) : feature.properties?.valueScore != null ? (
+                  <><br /><span style={{ color: '#94a3b8' }}>Score: {feature.properties.valueScore}</span></>
+                ) : null}
               </div>
             </Tooltip>
           </Polygon>

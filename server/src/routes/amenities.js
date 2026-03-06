@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import crypto from 'crypto';
 import { getSession } from '../state/sessionStore.js';
+import { recalculateScores } from '../utils/spotScoring.js';
 
 export const amenityRoutes = Router();
 
@@ -18,6 +19,7 @@ amenityRoutes.post('/', (req, res) => {
   const session = getSession(req.user.id);
   const amenity = { id: crypto.randomUUID(), type, lat, lng, notes: notes || '' };
   session.amenities.push(amenity);
+  recalculateScores(session);
   return res.json(amenity);
 });
 
@@ -33,6 +35,7 @@ amenityRoutes.patch('/:id', (req, res) => {
   if (lng != null) session.amenities[idx].lng = lng;
   if (notes !== undefined) session.amenities[idx].notes = notes;
 
+  recalculateScores(session);
   return res.json(session.amenities[idx]);
 });
 
@@ -42,6 +45,7 @@ amenityRoutes.delete('/:id', (req, res) => {
   const idx = session.amenities.findIndex((a) => a.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Amenity not found' });
   session.amenities.splice(idx, 1);
+  recalculateScores(session);
   return res.json({ message: 'Amenity deleted', amenities: session.amenities });
 });
 

@@ -4,6 +4,8 @@ const sessions = new Map();
 export function getSession(userId) {
   if (!sessions.has(userId)) {
     sessions.set(userId, {
+      currentEventId: null,
+      currentLayoutId: null,
       vendors: [],
       spotsGeoJSON: { type: 'FeatureCollection', features: [], metadata: {} },
       lastPlacement: null,

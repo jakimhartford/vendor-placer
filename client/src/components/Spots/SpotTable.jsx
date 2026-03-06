@@ -101,7 +101,16 @@ export default function SpotTable({ spots, vendors, assignments, onEditSpot, pri
                     {p.isCorner && <Badge text="C" color="#f59e0b" />}
                     {p.premium && <Badge text="P" color="#7c3aed" />}
                   </td>
-                  <td style={{ padding: '4px 4px', textAlign: 'center' }}>{p.trafficScore || '-'}</td>
+                  <td style={{ padding: '4px 4px', textAlign: 'center' }}>
+                    {p.valueScore != null ? (
+                      <span style={{
+                        padding: '1px 4px', borderRadius: 3, fontSize: 9, fontWeight: 700, color: '#fff',
+                        background: p.valueScore >= 70 ? '#22c55e' : p.valueScore >= 40 ? '#eab308' : '#ef4444',
+                      }}>
+                        {p.valueScore}
+                      </span>
+                    ) : (p.trafficScore || '-')}
+                  </td>
                   <td style={{ padding: '4px 4px' }}>
                     {restrictions.length > 0
                       ? restrictions.map((r, i) => <Badge key={i} text={r.text} color={r.color} />)

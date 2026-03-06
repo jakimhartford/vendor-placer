@@ -4,13 +4,29 @@ export const DEFAULT_PRICING_CONFIG = {
   categoryMultipliers: { food: 1.2, art: 1.0, craft: 1.0, jewelry: 1.0, clothing: 1.0, services: 0.9, other: 0.8 },
 };
 
+/**
+ * Score-based multiplier: 0.8x at score 0, 1.5x at score 100, linear interpolation.
+ */
+function scoreMultiplier(valueScore) {
+  if (valueScore == null) return 1;
+  const clamped = Math.max(0, Math.min(100, valueScore));
+  return 0.8 + (clamped / 100) * 0.7;
+}
+
 export function calculateSpotPrice(spotProps, vendor, config) {
   if (!config) return null;
-  const typeKey = spotProps.premium ? 'premium' : spotProps.isCorner ? 'corner' : 'regular';
+  // Score-based tier override: >=80 premium, >=50 corner, else regular
+  let typeKey;
+  if (spotProps.valueScore != null) {
+    typeKey = spotProps.valueScore >= 80 ? 'premium' : spotProps.valueScore >= 50 ? 'corner' : 'regular';
+  } else {
+    typeKey = spotProps.premium ? 'premium' : spotProps.isCorner ? 'corner' : 'regular';
+  }
   const basePrice = config.basePriceByType?.[typeKey] || 100;
   const tierMult = vendor ? (config.tierMultipliers?.[vendor.tier] || 1) : 1;
   const catMult = vendor ? (config.categoryMultipliers?.[vendor.category] || 1) : 1;
-  return Math.round(basePrice * tierMult * catMult);
+  const scoreMult = scoreMultiplier(spotProps.valueScore);
+  return Math.round(basePrice * tierMult * catMult * scoreMult);
 }
 
 export function calculateRevenueSummary(spots, vendors, assignments, config) {

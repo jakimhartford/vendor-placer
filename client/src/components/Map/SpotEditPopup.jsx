@@ -153,11 +153,21 @@ export default function SpotEditPopup({
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}>
 
-          {/* Spot label */}
-          <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>
-            Spot {props.label}
-            {props.isCorner && ' \u00B7 Corner'}
-            {props.premium && ' \u00B7 Premium'}
+          {/* Spot label + value score */}
+          <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>
+              Spot {props.label}
+              {props.isCorner && ' \u00B7 Corner'}
+              {props.premium && ' \u00B7 Premium'}
+            </span>
+            {props.valueScore != null && (
+              <span style={{
+                padding: '1px 6px', borderRadius: 9999, fontSize: 9, fontWeight: 700, color: '#fff',
+                background: props.valueScore >= 70 ? '#22c55e' : props.valueScore >= 40 ? '#eab308' : '#ef4444',
+              }}>
+                {props.valueScore}
+              </span>
+            )}
           </div>
 
           {/* Vendor name */}
@@ -248,7 +258,17 @@ export default function SpotEditPopup({
         onClick={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <div style={{ fontWeight: 700, fontSize: 14 }}>Edit Spot</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontWeight: 700, fontSize: 14 }}>Edit Spot</span>
+            {props.valueScore != null && (
+              <span style={{
+                padding: '1px 6px', borderRadius: 9999, fontSize: 9, fontWeight: 700, color: '#fff',
+                background: props.valueScore >= 70 ? '#22c55e' : props.valueScore >= 40 ? '#eab308' : '#ef4444',
+              }}>
+                {props.valueScore}
+              </span>
+            )}
+          </div>
           {vendor && (
             <button onClick={() => setMode('view')} style={{
               background: 'none', border: 'none', color: '#3b82f6', fontSize: 11,

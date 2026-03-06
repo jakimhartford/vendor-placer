@@ -41,6 +41,54 @@ export function authMe() {
   return api.get('/api/auth/me').then((res) => res.data);
 }
 
+// ---------- Events ----------
+
+export function fetchEvents() {
+  return api.get('/api/events').then((res) => res.data);
+}
+
+export function fetchEvent(id) {
+  return api.get(`/api/events/${id}`).then((res) => res.data);
+}
+
+export function createEvent(data) {
+  return api.post('/api/events', data).then((res) => res.data);
+}
+
+export function updateEvent(id, data) {
+  return api.put(`/api/events/${id}`, data).then((res) => res.data);
+}
+
+export function deleteEvent(id) {
+  return api.delete(`/api/events/${id}`).then((res) => res.data);
+}
+
+// ---------- Layouts ----------
+
+export function fetchLayouts(eventId) {
+  return api.get(`/api/events/${eventId}/layouts`).then((res) => res.data);
+}
+
+export function fetchLayout(eventId, layoutId) {
+  return api.get(`/api/events/${eventId}/layouts/${layoutId}`).then((res) => res.data);
+}
+
+export function createLayout(eventId, data) {
+  return api.post(`/api/events/${eventId}/layouts`, data).then((res) => res.data);
+}
+
+export function updateLayout(eventId, layoutId, data) {
+  return api.put(`/api/events/${eventId}/layouts/${layoutId}`, data).then((res) => res.data);
+}
+
+export function duplicateLayout(eventId, layoutId) {
+  return api.post(`/api/events/${eventId}/layouts/${layoutId}/duplicate`).then((res) => res.data);
+}
+
+export function deleteLayout(eventId, layoutId) {
+  return api.delete(`/api/events/${eventId}/layouts/${layoutId}`).then((res) => res.data);
+}
+
 // ---------- Vendors ----------
 
 export function fetchVendors() {
@@ -109,6 +157,10 @@ export function updateSpotsBatch(ids, updates) {
   return api.post('/api/spots/update-batch', { ids, updates }).then((res) => res.data);
 }
 
+export function recalculateScores() {
+  return api.post('/api/spots/recalculate-scores').then((res) => res.data);
+}
+
 // ---------- Placements ----------
 
 export function runPlacement(settings) {
@@ -119,46 +171,10 @@ export function fetchPlacements() {
   return api.get('/api/placements').then((res) => res.data);
 }
 
-// ---------- Projects ----------
-
-export function fetchProjects() {
-  return api.get('/api/projects').then((res) => res.data);
-}
-
-export function fetchProject(id) {
-  return api.get(`/api/projects/${id}`).then((res) => res.data);
-}
-
-export function createProject(data) {
-  return api.post('/api/projects', data).then((res) => res.data);
-}
-
-export function updateProject(id, data) {
-  return api.put(`/api/projects/${id}`, data).then((res) => res.data);
-}
-
-export function deleteProject(id) {
-  return api.delete(`/api/projects/${id}`).then((res) => res.data);
-}
-
-// ---------- Versions ----------
-
-export function fetchVersions(projectId) {
-  return api.get(`/api/projects/${projectId}/versions`).then((res) => res.data);
-}
-
-export function createVersion(projectId, name) {
-  return api.post(`/api/projects/${projectId}/versions`, { name }).then((res) => res.data);
-}
-
-export function loadVersion(projectId, versionId) {
-  return api.post(`/api/projects/${projectId}/versions/${versionId}/load`).then((res) => res.data);
-}
-
 // ---------- Share Links ----------
 
-export function generateShareLink(projectId, vendorId) {
-  return api.post(`/api/projects/${projectId}/share-link`, { vendorId }).then((res) => res.data);
+export function generateShareLink(eventId, vendorId) {
+  return api.post(`/api/events/${eventId}/share-link`, { vendorId }).then((res) => res.data);
 }
 
 export function fetchShareData(token) {
@@ -255,16 +271,58 @@ export function deleteTimeWindow(id) {
 
 // ---------- Check-In ----------
 
-export function fetchCheckInData(projectId) {
-  return api.get(`/api/projects/${projectId}/checkin`).then((res) => res.data);
+export function fetchCheckInData(eventId) {
+  return api.get(`/api/events/${eventId}/checkin`).then((res) => res.data);
 }
 
-export function updateCheckIn(projectId, vendorId, data) {
-  return api.patch(`/api/projects/${projectId}/checkin/${vendorId}`, data).then((res) => res.data);
+export function updateCheckIn(eventId, vendorId, data) {
+  return api.patch(`/api/events/${eventId}/checkin/${vendorId}`, data).then((res) => res.data);
 }
 
-export function fetchCheckInSummary(projectId) {
-  return api.get(`/api/projects/${projectId}/checkin/summary`).then((res) => res.data);
+export function fetchCheckInSummary(eventId) {
+  return api.get(`/api/events/${eventId}/checkin/summary`).then((res) => res.data);
+}
+
+// ---------- Vendor Portal ----------
+
+export function fetchPortalInfo(inviteToken) {
+  return axios.get(`${api.defaults.baseURL || ''}/api/vendor-portal/${inviteToken}`).then((res) => res.data);
+}
+
+export function applyToPortal(inviteToken, data) {
+  return axios.post(`${api.defaults.baseURL || ''}/api/vendor-portal/${inviteToken}/apply`, data).then((res) => res.data);
+}
+
+export function fetchVendorStatus(vendorToken) {
+  return axios.get(`${api.defaults.baseURL || ''}/api/vendor-portal/vendor/${vendorToken}`).then((res) => res.data);
+}
+
+export function updateVendorProfile(vendorToken, data) {
+  return axios.patch(`${api.defaults.baseURL || ''}/api/vendor-portal/vendor/${vendorToken}`, data).then((res) => res.data);
+}
+
+export function cancelVendorApplication(vendorToken, reason) {
+  return axios.post(`${api.defaults.baseURL || ''}/api/vendor-portal/vendor/${vendorToken}/cancel`, { reason }).then((res) => res.data);
+}
+
+export function enableVendorPortal(eventId, config) {
+  return api.post(`/api/events/${eventId}/vendor-portal/enable`, config || {}).then((res) => res.data);
+}
+
+export function disableVendorPortal(eventId) {
+  return api.post(`/api/events/${eventId}/vendor-portal/disable`).then((res) => res.data);
+}
+
+export function updatePortalConfig(eventId, config) {
+  return api.patch(`/api/events/${eventId}/vendor-portal/config`, config).then((res) => res.data);
+}
+
+export function updateVendorStatus(vendorId, eventId, status, extra) {
+  return api.patch(`/api/vendors/${vendorId}/status`, { eventId, status, ...extra }).then((res) => res.data);
+}
+
+export function batchApproveVendors(eventId, vendorIds) {
+  return api.post('/api/vendors/approve-batch', { eventId, vendorIds }).then((res) => res.data);
 }
 
 export default api;

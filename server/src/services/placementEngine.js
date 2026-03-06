@@ -156,11 +156,11 @@ export function runPlacement(vendors, spotsGeoJSON, options = {}) {
   const scoredSpots = spotProps
     .map((sp) => ({
       ...sp,
-      score: (sp.isCorner ? 100 : 0) + (sp.trafficScore || 0) * 10,
+      score: sp.valueScore ?? ((sp.isCorner ? 100 : 0) + (sp.trafficScore || 0) * 10),
     }))
     .sort((a, b) => b.score - a.score);
 
-  const premiumSpots = scoredSpots.filter((s) => s.isCorner || (s.trafficScore || 0) >= 7);
+  const premiumSpots = scoredSpots.filter((s) => s.isCorner || (s.trafficScore || 0) >= 7 || (s.valueScore || 0) >= 70);
 
   // Track state
   const usedSpotIds = new Set();

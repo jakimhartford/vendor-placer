@@ -65,6 +65,7 @@ projectRoutes.get('/:id', async (req, res) => {
       mapCenter: project.mapCenter,
       zoom: project.zoom,
       settings: project.settings,
+      vendorPortal: project.vendorPortal || null,
       versions: (project.versions || []).map((v) => ({ _id: v._id, name: v.name, createdAt: v.createdAt })),
       activeVersionId: project.activeVersionId,
     });

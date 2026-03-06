@@ -18,8 +18,8 @@ function featureCenter(feature) {
 }
 
 export default function CheckInPage() {
-  const { projectId } = useParams();
-  const { project, checkIns, loading, error, updateCheckIn } = useCheckIn(projectId);
+  const { eventId } = useParams();
+  const { project, checkIns, loading, error, updateCheckIn } = useCheckIn(eventId);
   const [search, setSearch] = useState('');
   const [showMissing, setShowMissing] = useState(false);
 

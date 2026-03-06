@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import useVendors from './hooks/useVendors.js';
 import useSpots from './hooks/useSpots.js';
 import usePlacements from './hooks/usePlacements.js';
-import useProjects from './hooks/useProjects.js';
+import useLayouts from './hooks/useLayouts.js';
 import useDeadZones from './hooks/useDeadZones.js';
 import useUndoRedo from './hooks/useUndoRedo.js';
 import MapView from './components/Map/MapView.jsx';
@@ -11,7 +12,6 @@ import VendorTable from './components/Vendors/VendorTable.jsx';
 import CollapsibleSection from './components/Vendors/CollapsibleSection.jsx';
 import PlacementControls from './components/Placement/PlacementControls.jsx';
 import PlacementStats from './components/Placement/PlacementStats.jsx';
-import ProjectBar from './components/Projects/ProjectBar.jsx';
 import SpotTable from './components/Spots/SpotTable.jsx';
 import PricingConfig from './components/Revenue/PricingConfig.jsx';
 import RevenueSummary from './components/Revenue/RevenueSummary.jsx';
@@ -21,12 +21,18 @@ import useLogistics from './hooks/useLogistics.js';
 import { ELEMENT_CATALOG } from './components/Placement/elementCatalog.js';
 import LogisticsPanel from './components/Logistics/LogisticsPanel.jsx';
 import ExportPdfButton from './components/Export/ExportPdfButton.jsx';
+import VendorPortalConfig from './components/Vendors/VendorPortalConfig.jsx';
 import WalkthroughTutorial, { STORAGE_KEY as TUTORIAL_KEY } from './components/Tutorial/WalkthroughTutorial.jsx';
-import { saveSpots as apiSaveSpots } from './api/index.js';
+import { saveSpots as apiSaveSpots, fetchEvent } from './api/index.js';
 import { useAuth } from './contexts/AuthContext.jsx';
 
 export default function App() {
+  const { eventId, layoutId } = useParams();
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
+
+  const [eventData, setEventData] = useState(null);
+
   const {
     vendors,
     loading: vendorsLoading,
@@ -60,19 +66,17 @@ export default function App() {
   } = usePlacements();
 
   const {
-    projects,
-    currentProjectId,
-    loading: projectsLoading,
-    loadProjects,
-    loadProject,
-    saveNewProject,
-    saveProject,
-    removeProject,
-    versions,
-    activeVersionId,
-    saveVersion,
-    loadVersionData,
-  } = useProjects();
+    layouts,
+    currentLayoutId,
+    loading: layoutsLoading,
+    loadLayouts,
+    loadLayout,
+    saveNewLayout,
+    saveLayout,
+    duplicate: duplicateLayout,
+    removeLayout,
+    setCurrentLayoutId,
+  } = useLayouts(eventId);
 
   const {
     deadZones,
@@ -115,7 +119,7 @@ export default function App() {
     setTimeWindows,
   } = useLogistics();
 
-  // Street path state (must be before captureSnapshot which references paths)
+  // Street path state
   const [paths, setPaths] = useState([]);
   const [pathLabelIdx, setPathLabelIdx] = useState(0);
 
@@ -171,7 +175,7 @@ export default function App() {
 
   const mapRef = useRef(null);
 
-  // Project settings
+  // Project settings (from event)
   const [projectSettings, setProjectSettings] = useState({
     noSameAdjacentCategories: ['art', 'craft', 'jewelry', 'clothing'],
   });
@@ -179,18 +183,16 @@ export default function App() {
   // Pricing config
   const [pricingConfig, setPricingConfig] = useState(null);
 
+  // Vendor portal config
+  const [portalConfig, setPortalConfig] = useState(null);
+
   const [streetDrawMode, setStreetDrawMode] = useState(false);
   const [streetParams, setStreetParams] = useState({ spotSizeFt: 12, spacingFt: 4 });
-
-  // Spot place mode (click to place individual spots)
   const [spotPlaceMode, setSpotPlaceMode] = useState(false);
-
-  // Element palette state (replaces individual mode states)
   const [activeElement, setActiveElement] = useState(null);
   const [amenitiesVisible, setAmenitiesVisible] = useState(true);
   const [mapZonesVisible, setMapZonesVisible] = useState(true);
 
-  // Derive legacy booleans from activeElement so MapView/placers/drawers need zero changes
   const activeElementDef = activeElement ? ELEMENT_CATALOG.find((e) => e.id === activeElement) : null;
   const deadZoneDrawMode = activeElement === 'dead_zone';
   const amenityPlaceMode = !!activeElementDef?.amenityType;
@@ -199,87 +201,101 @@ export default function App() {
   const mapZoneDrawMode = !!activeElementDef?.zoneType;
   const mapZoneType = activeElementDef?.zoneType || 'barricade';
 
-  // Move vendor state
   const [movingVendor, setMovingVendor] = useState(null);
-
-  // Multi-select state
   const [selectedSpotIds, setSelectedSpotIds] = useState(new Set());
 
-  // Tutorial state
   const [tutorialActive, setTutorialActive] = useState(
     () => !localStorage.getItem(TUTORIAL_KEY)
   );
   const LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
+  // Load event + layout on mount
   useEffect(() => {
-    loadVendors();
-    loadSpots();
-    loadProjects();
-    loadDeadZones();
-    loadAmenities();
-    loadMapZones();
-    loadLogistics();
-  }, [loadVendors, loadSpots, loadProjects, loadDeadZones, loadAmenities, loadMapZones, loadLogistics]);
+    if (!eventId) return;
 
-  // Project handlers
-  const handleLoadProject = useCallback(async (id) => {
-    const data = await loadProject(id);
-    if (data) {
-      await loadVendors();
-      await loadSpots();
-      await loadDeadZones();
-      await loadAmenities();
-      await loadMapZones();
-      await loadLogistics();
-      setPaths(data.paths || []);
-      setPathLabelIdx(data.paths?.length || 0);
-      if (data.settings) {
-        setProjectSettings(data.settings);
-        setPricingConfig(data.settings.pricingConfig || null);
+    const init = async () => {
+      try {
+        const ev = await fetchEvent(eventId);
+        setEventData(ev);
+        if (ev.settings) {
+          setProjectSettings(ev.settings);
+          setPricingConfig(ev.settings.pricingConfig || null);
+        }
+        if (ev.vendorPortal) {
+          setPortalConfig(ev.vendorPortal);
+        }
+      } catch {
+        // event load failed
       }
-      if (data.placements) {
-        const raw = data.placements.assignments || {};
-        updateAssignments(Array.isArray(raw) ? Object.fromEntries(raw.map((a) => [a.spotId, a.vendorId])) : raw);
+
+      if (layoutId) {
+        const data = await loadLayout(layoutId, eventId);
+        if (data) {
+          await loadVendors();
+          await loadSpots();
+          await loadDeadZones();
+          await loadAmenities();
+          await loadMapZones();
+          await loadLogistics();
+          setPaths(data.paths || []);
+          setPathLabelIdx(data.paths?.length || 0);
+          if (data.settings) {
+            setProjectSettings(data.settings);
+            setPricingConfig(data.settings.pricingConfig || null);
+          }
+          if (data.vendorPortal) {
+            setPortalConfig(data.vendorPortal);
+          }
+          if (data.placements) {
+            const raw = data.placements.assignments || {};
+            updateAssignments(Array.isArray(raw) ? Object.fromEntries(raw.map((a) => [a.spotId, a.vendorId])) : raw);
+          }
+        }
+      } else {
+        // No layout selected, load session data
+        loadVendors();
+        loadSpots();
+        loadDeadZones();
+        loadAmenities();
+        loadMapZones();
+        loadLogistics();
       }
+
+      loadLayouts(eventId);
+    };
+    init();
+  }, [eventId, layoutId]);
+
+  // Layout handlers
+  const handleLoadLayout = useCallback(async (lid) => {
+    navigate(`/events/${eventId}/layouts/${lid}`);
+  }, [eventId, navigate]);
+
+  const handleSaveNewLayout = useCallback(async (name) => {
+    const result = await saveNewLayout({ name, paths }, eventId);
+    if (result) {
+      navigate(`/events/${eventId}/layouts/${result.id}`);
     }
-  }, [loadProject, loadVendors, loadSpots, loadDeadZones, loadAmenities, loadMapZones, loadLogistics, updateAssignments]);
+  }, [saveNewLayout, paths, eventId, navigate]);
 
-  const handleSaveNewProject = useCallback(async (name) => {
+  const handleSaveLayout = useCallback(async (lid) => {
     const settings = { ...projectSettings, pricingConfig };
-    await saveNewProject({ name, paths, settings });
-  }, [saveNewProject, paths, projectSettings, pricingConfig]);
+    await saveLayout(lid, { paths, settings }, eventId);
+  }, [saveLayout, paths, projectSettings, pricingConfig, eventId]);
 
-  const handleSaveProject = useCallback(async (id) => {
-    const settings = { ...projectSettings, pricingConfig };
-    await saveProject(id, { paths, settings });
-  }, [saveProject, paths, projectSettings, pricingConfig]);
-
-  const handleDeleteProject = useCallback(async (id) => {
-    await removeProject(id);
-  }, [removeProject]);
-
-  const handleSaveVersion = useCallback(async (name) => {
-    await saveVersion(name);
-  }, [saveVersion]);
-
-  const handleLoadVersion = useCallback(async (versionId) => {
-    const data = await loadVersionData(versionId);
-    if (data) {
-      await loadVendors();
-      await loadSpots();
-      await loadDeadZones();
-      setPaths(data.paths || []);
-      setPathLabelIdx(data.paths?.length || 0);
-      if (data.settings) {
-        setProjectSettings(data.settings);
-        setPricingConfig(data.settings.pricingConfig || null);
-      }
-      if (data.placements) {
-        const raw = data.placements.assignments || {};
-        updateAssignments(Array.isArray(raw) ? Object.fromEntries(raw.map((a) => [a.spotId, a.vendorId])) : raw);
-      }
+  const handleDeleteLayout = useCallback(async (lid) => {
+    await removeLayout(lid, eventId);
+    if (lid === layoutId) {
+      navigate(`/events/${eventId}`);
     }
-  }, [loadVersionData, loadVendors, loadSpots, loadDeadZones, updateAssignments]);
+  }, [removeLayout, eventId, layoutId, navigate]);
+
+  const handleDuplicateLayout = useCallback(async (lid) => {
+    const result = await duplicateLayout(lid, eventId);
+    if (result) {
+      navigate(`/events/${eventId}/layouts/${result.id}`);
+    }
+  }, [duplicateLayout, eventId, navigate]);
 
   const handleClearVendors = async () => {
     await clearVendors();
@@ -336,7 +352,6 @@ export default function App() {
     }
   };
 
-  // Element palette selection handler
   const handleSelectElement = useCallback((elementId) => {
     if (elementId) {
       setStreetDrawMode(false);
@@ -399,7 +414,6 @@ export default function App() {
     setSelectedVendorId((prev) => (prev === vendorId ? null : vendorId));
   }, []);
 
-  // Spot editing state
   const [editingSpotId, setEditingSpotId] = useState(null);
 
   const editingSpot = editingSpotId
@@ -422,7 +436,6 @@ export default function App() {
   const handleSpotClick = useCallback((feature, event) => {
     const spotId = feature.properties?.id;
 
-    // If moving a vendor, complete the move
     if (movingVendor && spotId) {
       const assignedVendorId = (placements.assignments || {})[spotId];
       if (!assignedVendorId && !feature.properties?.deadZone) {
@@ -432,7 +445,6 @@ export default function App() {
       return;
     }
 
-    // Shift+click for multi-select
     if (event?.shiftKey && spotId) {
       setSelectedSpotIds((prev) => {
         const next = new Set(prev);
@@ -462,7 +474,6 @@ export default function App() {
     setEditingSpotId(null);
   }, []);
 
-  // Externally set editing spot (e.g. from SpotTable)
   const handleEditSpotById = useCallback((id) => {
     setEditingSpotId(id);
   }, []);
@@ -489,12 +500,10 @@ export default function App() {
         setSelectedSpotIds(new Set());
         setActiveElement(null);
       }
-      // Undo: Cmd/Ctrl+Z (without Shift)
       if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
         handleUndo();
       }
-      // Redo: Cmd/Ctrl+Shift+Z or Cmd/Ctrl+Y
       if ((e.metaKey || e.ctrlKey) && ((e.key === 'z' && e.shiftKey) || e.key === 'y')) {
         e.preventDefault();
         handleRedo();
@@ -504,14 +513,30 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleUndo, handleRedo]);
 
-  const loading = vendorsLoading || spotsLoading || placementsLoading || projectsLoading;
+  const loading = vendorsLoading || spotsLoading || placementsLoading || layoutsLoading;
 
   return (
     <div className="app-layout">
       <aside className="sidebar">
         <div className="sidebar-header">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h1 style={{ margin: 0 }}>Vendor Placer</h1>
+            <h1 style={{ margin: 0, fontSize: 16 }}>
+              <span
+                style={{ color: '#3b82f6', cursor: 'pointer' }}
+                onClick={() => navigate('/events')}
+                title="All Events"
+              >
+                Events
+              </span>
+              {' / '}
+              <span
+                style={{ color: '#3b82f6', cursor: 'pointer' }}
+                onClick={() => navigate(`/events/${eventId}`)}
+                title="Event Dashboard"
+              >
+                {eventData?.name || 'Event'}
+              </span>
+            </h1>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               <button
                 onClick={() => { localStorage.removeItem(TUTORIAL_KEY); setTutorialActive(true); }}
@@ -537,22 +562,66 @@ export default function App() {
               </button>
             </div>
           </div>
+
+          {/* Layout selector bar */}
+          <div style={{ marginTop: 8, marginBottom: 4 }} data-tour="project-bar">
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginBottom: 6 }}>
+              <select
+                value={layoutId || ''}
+                onChange={(e) => { if (e.target.value) handleLoadLayout(e.target.value); }}
+                disabled={loading}
+                style={{
+                  flex: 1, padding: '5px 8px', fontSize: 12,
+                  background: '#16213e', color: '#e2e8f0', border: '1px solid #334155', borderRadius: 4,
+                }}
+              >
+                <option value="">-- Select Layout --</option>
+                {layouts.map((l) => (
+                  <option key={l.id} value={l.id}>{l.name}</option>
+                ))}
+              </select>
+
+              {layoutId && (
+                <>
+                  <button
+                    className="btn btn-primary"
+                    disabled={loading}
+                    onClick={() => handleSaveLayout(layoutId)}
+                    style={{ width: 'auto', padding: '4px 10px', fontSize: 11, marginBottom: 0 }}
+                  >
+                    Save
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    disabled={loading}
+                    onClick={() => handleDuplicateLayout(layoutId)}
+                    style={{ width: 'auto', padding: '4px 10px', fontSize: 11, marginBottom: 0 }}
+                    title="Duplicate layout"
+                  >
+                    Dup
+                  </button>
+                  <button
+                    className="btn btn-danger"
+                    disabled={loading}
+                    onClick={() => { if (confirm('Delete this layout?')) handleDeleteLayout(layoutId); }}
+                    style={{ width: 'auto', padding: '4px 10px', fontSize: 11, marginBottom: 0 }}
+                  >
+                    Del
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* New layout button */}
+            <NewLayoutButton
+              loading={loading}
+              onSave={handleSaveNewLayout}
+            />
+          </div>
+
           <p style={{ margin: '4px 0 0', fontSize: 12, color: '#64748b' }}>
             {user?.email || 'Event vendor placement tool'}
           </p>
-          <ProjectBar
-            projects={projects}
-            currentProjectId={currentProjectId}
-            loading={projectsLoading}
-            onLoad={handleLoadProject}
-            onSaveNew={handleSaveNewProject}
-            onSave={handleSaveProject}
-            onDelete={handleDeleteProject}
-            versions={versions}
-            activeVersionId={activeVersionId}
-            onLoadVersion={handleLoadVersion}
-            onSaveVersion={handleSaveVersion}
-          />
         </div>
 
         <CollapsibleSection title="Upload Vendors">
@@ -640,6 +709,15 @@ export default function App() {
           />
         </CollapsibleSection>
 
+        <CollapsibleSection title="Vendor Portal" defaultOpen={false}>
+          <VendorPortalConfig
+            eventId={eventId}
+            vendors={vendors}
+            portalConfig={portalConfig}
+            onConfigChange={setPortalConfig}
+          />
+        </CollapsibleSection>
+
         <CollapsibleSection title="Vendors" defaultOpen={false}>
           <VendorTable
             vendors={vendors}
@@ -647,8 +725,9 @@ export default function App() {
             spots={spots}
             onSelectVendor={handleSelectVendor}
             onReassign={handleReassign}
-            currentProjectId={currentProjectId}
+            currentEventId={eventId}
             onUpdateVendor={updateVendor}
+            onVendorsRefresh={loadVendors}
           />
         </CollapsibleSection>
       </aside>
@@ -679,7 +758,7 @@ export default function App() {
           onDeadZoneDrawDone={handleDeadZoneDrawDone}
           onStartMove={handleStartMove}
           onUpdateDeadZone={handleUpdateDeadZone}
-          currentProjectId={currentProjectId}
+          currentProjectId={layoutId}
           pricingConfig={pricingConfig}
           amenities={amenities}
           amenityPlaceMode={amenityPlaceMode}
@@ -707,5 +786,62 @@ export default function App() {
         onComplete={() => setTutorialActive(false)}
       />
     </div>
+  );
+}
+
+function NewLayoutButton({ loading, onSave }) {
+  const [showNew, setShowNew] = useState(false);
+  const [newName, setNewName] = useState('');
+
+  const handleSave = () => {
+    if (!newName.trim()) return;
+    onSave(newName.trim());
+    setNewName('');
+    setShowNew(false);
+  };
+
+  if (showNew) {
+    return (
+      <div style={{ display: 'flex', gap: 4 }}>
+        <input
+          type="text"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          placeholder="Layout name..."
+          onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+          autoFocus
+          style={{
+            flex: 1, padding: '4px 8px', fontSize: 12,
+            background: '#16213e', color: '#e2e8f0', border: '1px solid #334155', borderRadius: 4,
+          }}
+        />
+        <button
+          className="btn btn-primary"
+          onClick={handleSave}
+          disabled={loading || !newName.trim()}
+          style={{ width: 'auto', padding: '4px 10px', fontSize: 11, marginBottom: 0 }}
+        >
+          Create
+        </button>
+        <button
+          className="btn btn-secondary"
+          onClick={() => setShowNew(false)}
+          style={{ width: 'auto', padding: '4px 10px', fontSize: 11, marginBottom: 0 }}
+        >
+          Cancel
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      className="btn btn-secondary"
+      onClick={() => setShowNew(true)}
+      disabled={loading}
+      style={{ fontSize: 11, padding: '4px 10px' }}
+    >
+      New Layout
+    </button>
   );
 }

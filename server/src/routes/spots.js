@@ -2,6 +2,7 @@ import { Router } from 'express';
 import crypto from 'crypto';
 import { getSession } from '../state/sessionStore.js';
 import { spotOverlapsDeadZone } from '../utils/geometry.js';
+import { recalculateScores } from '../utils/spotScoring.js';
 
 export const spotRoutes = Router();
 
@@ -300,6 +301,16 @@ function generateSpotsFromPath(path, { spotSizeFt = 12, spacingFt = 2, label = '
 // Routes
 // ──────────────────────────────────────────────
 
+// POST /api/spots/recalculate-scores
+spotRoutes.post('/recalculate-scores', (req, res) => {
+  const session = getSession(req.user.id);
+  recalculateScores(session);
+  return res.json({
+    message: 'Scores recalculated',
+    spotsGeoJSON: session.spotsGeoJSON,
+  });
+});
+
 // GET /api/spots
 spotRoutes.get('/', (req, res) => {
   return res.json(getSession(req.user.id).spotsGeoJSON);
@@ -321,6 +332,7 @@ spotRoutes.put('/', (req, res) => {
   }
   const session = getSession(req.user.id);
   session.spotsGeoJSON = body;
+  recalculateScores(session);
   return res.json({
     message: `Replaced spots collection (${session.spotsGeoJSON.features.length} spots)`,
     count: session.spotsGeoJSON.features.length,
@@ -347,6 +359,7 @@ spotRoutes.post('/generate-grid', (req, res) => {
     features: filtered,
     metadata: session.spotsGeoJSON.metadata || {},
   };
+  recalculateScores(session);
 
   return res.json({
     message: `Generated ${filtered.length} spots for area "${area}" (${features.length - filtered.length} in dead zones)`,
@@ -393,6 +406,7 @@ spotRoutes.post('/add-single', (req, res) => {
     features: [...existingFeatures, feature],
     metadata: session.spotsGeoJSON.metadata || {},
   };
+  recalculateScores(session);
 
   return res.json({
     message: `Added spot "${spotLabel}"`,
@@ -420,6 +434,7 @@ spotRoutes.patch('/:id', (req, res) => {
     ...updates,
     id,
   };
+  recalculateScores(session);
 
   return res.json({
     message: `Updated spot "${id}"`,
@@ -513,6 +528,7 @@ spotRoutes.post('/generate-from-path', (req, res) => {
     features: [...existingFeatures, ...filtered],
     metadata: session.spotsGeoJSON.metadata || {},
   };
+  recalculateScores(session);
 
   return res.json({
     message: `Generated ${filtered.length} spots along path (${newFeatures.length - filtered.length} in dead zones, total: ${session.spotsGeoJSON.features.length})`,

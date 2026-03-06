@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import crypto from 'crypto';
 import { getSession } from '../state/sessionStore.js';
+import { recalculateScores } from '../utils/spotScoring.js';
 
 export const mapZoneRoutes = Router();
 
@@ -19,6 +20,7 @@ mapZoneRoutes.post('/', (req, res) => {
   const session = getSession(req.user.id);
   const zone = { id: crypto.randomUUID(), type: type || 'barricade', polygon, label: label || null, notes: notes || null };
   session.mapZones.push(zone);
+  recalculateScores(session);
 
   return res.json({ mapZone: zone, mapZones: session.mapZones });
 });
@@ -42,6 +44,7 @@ mapZoneRoutes.patch('/:id', (req, res) => {
   if (label !== undefined) session.mapZones[idx].label = label;
   if (notes !== undefined) session.mapZones[idx].notes = notes;
 
+  recalculateScores(session);
   return res.json({ mapZone: session.mapZones[idx], mapZones: session.mapZones });
 });
 
@@ -53,6 +56,7 @@ mapZoneRoutes.delete('/:id', (req, res) => {
     return res.status(404).json({ error: 'Map zone not found' });
   }
   session.mapZones.splice(idx, 1);
+  recalculateScores(session);
   return res.json({ message: 'Map zone deleted', mapZones: session.mapZones });
 });
 

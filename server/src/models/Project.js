@@ -88,6 +88,14 @@ const projectSchema = new mongoose.Schema({
     of: Object,
     default: {},
   },
+  vendorPortal: {
+    enabled: { type: Boolean, default: false },
+    inviteToken: { type: String, default: null },
+    maxSpotChoices: { type: Number, default: 3 },
+    signupDeadline: { type: Date, default: null },
+    instructions: { type: String, default: '' },
+    requirePayment: { type: Boolean, default: false },
+  },
 }, {
   timestamps: true,
 });

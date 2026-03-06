@@ -1,27 +1,39 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { TIER_COLORS, EMPTY_COLOR } from '../../utils/tierColors.js';
-import { generateShareLink } from '../../api/index.js';
+import { generateShareLink, updateVendorStatus, batchApproveVendors } from '../../api/index.js';
+
+const STATUS_COLORS = {
+  applied: '#3b82f6', approved: '#22c55e', waitlisted: '#eab308',
+  assigned: '#7c3aed', checked_in: '#059669', canceled: '#ef4444',
+  invited: '#94a3b8',
+};
 
 const COLUMNS = [
-  { key: 'name', label: 'Name', width: '26%' },
-  { key: 'category', label: 'Type', width: '13%' },
-  { key: 'tier', label: 'Tier', width: '11%' },
-  { key: 'bid', label: 'Bid', width: '10%' },
-  { key: 'spot', label: 'Spot', width: '22%' },
-  { key: 'status', label: '', width: '18%' },
+  { key: 'name', label: 'Name', width: '24%' },
+  { key: 'category', label: 'Type', width: '11%' },
+  { key: 'tier', label: 'Tier', width: '9%' },
+  { key: 'bid', label: 'Bid', width: '8%' },
+  { key: 'spot', label: 'Spot', width: '18%' },
+  { key: 'vstatus', label: 'Status', width: '14%' },
+  { key: 'actions', label: '', width: '16%' },
 ];
 
-export default function VendorTable({ vendors, assignments, spots, onSelectVendor, onReassign, currentProjectId, onUpdateVendor }) {
+export default function VendorTable({ vendors, assignments, spots, onSelectVendor, onReassign, currentEventId, currentProjectId, onUpdateVendor, onVendorsRefresh }) {
+  // Support both currentEventId (new) and currentProjectId (legacy)
+  const resolvedId = currentEventId || currentProjectId;
   const [sortKey, setSortKey] = useState('name');
   const [sortDir, setSortDir] = useState(1);
   const [search, setSearch] = useState('');
   const [editingVendorId, setEditingVendorId] = useState(null);
   const [filterUnplaced, setFilterUnplaced] = useState(false);
+  const [filterStatus, setFilterStatus] = useState('all');
   const [copiedVendorId, setCopiedVendorId] = useState(null);
   const [editingBidId, setEditingBidId] = useState(null);
   const [bidValue, setBidValue] = useState('');
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(15);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [expandedId, setExpandedId] = useState(null);
 
   // Build vendorId -> { spotId, spotLabel, allSpots } map
   const vendorSpotMap = useMemo(() => {
@@ -63,12 +75,21 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
       .sort((a, b) => b.trafficScore - a.trafficScore);
   }, [spots, assignments]);
 
+  // Check if any vendor has portal statuses
+  const hasPortalVendors = useMemo(() => {
+    return (vendors || []).some((v) => v.status && v.status !== 'approved');
+  }, [vendors]);
+
   const filtered = useMemo(() => {
     if (!vendors?.length) return [];
     let list = vendors;
 
     if (filterUnplaced) {
       list = list.filter((v) => !vendorSpotMap[v.id]);
+    }
+
+    if (filterStatus !== 'all') {
+      list = list.filter((v) => (v.status || 'approved') === filterStatus);
     }
 
     if (search.trim()) {
@@ -80,7 +101,8 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
           v.tier?.toLowerCase().includes(q) ||
           (vendorSpotMap[v.id]?.label || '').toLowerCase().includes(q) ||
           (v.conflicts || []).some((c) => c.toLowerCase().includes(q)) ||
-          (v.premium && 'premium'.includes(q))
+          (v.premium && 'premium'.includes(q)) ||
+          (v.status || '').toLowerCase().includes(q)
       );
     }
 
@@ -106,10 +128,10 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
       if (aVal > bVal) return 1 * sortDir;
       return 0;
     });
-  }, [vendors, sortKey, sortDir, search, vendorSpotMap, filterUnplaced]);
+  }, [vendors, sortKey, sortDir, search, vendorSpotMap, filterUnplaced, filterStatus]);
 
   // Reset to first page when filters/sort change
-  useEffect(() => { setPage(0); }, [search, filterUnplaced, sortKey, sortDir]);
+  useEffect(() => { setPage(0); }, [search, filterUnplaced, filterStatus, sortKey, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const paginated = filtered.slice(page * pageSize, (page + 1) * pageSize);
@@ -135,9 +157,9 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
 
   const handleShare = useCallback(async (e, vendorId) => {
     e.stopPropagation();
-    if (!currentProjectId) return;
+    if (!resolvedId) return;
     try {
-      const { url } = await generateShareLink(currentProjectId, vendorId);
+      const { url } = await generateShareLink(resolvedId, vendorId);
       const fullUrl = `${window.location.origin}${url}`;
       await navigator.clipboard.writeText(fullUrl);
       setCopiedVendorId(vendorId);
@@ -145,7 +167,39 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
     } catch {
       // ignore
     }
-  }, [currentProjectId]);
+  }, [resolvedId]);
+
+  const handleStatusChange = useCallback(async (e, vendorId, newStatus) => {
+    e.stopPropagation();
+    if (!resolvedId) return;
+    try {
+      await updateVendorStatus(vendorId, resolvedId, newStatus);
+      onVendorsRefresh?.();
+    } catch (err) {
+      console.error('Status change error:', err);
+    }
+  }, [resolvedId, onVendorsRefresh]);
+
+  const handleBatchApprove = useCallback(async () => {
+    if (!resolvedId || selectedIds.size === 0) return;
+    try {
+      await batchApproveVendors(resolvedId, [...selectedIds]);
+      setSelectedIds(new Set());
+      onVendorsRefresh?.();
+    } catch (err) {
+      console.error('Batch approve error:', err);
+    }
+  }, [resolvedId, selectedIds, onVendorsRefresh]);
+
+  const toggleSelect = useCallback((e, vendorId) => {
+    e.stopPropagation();
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(vendorId)) next.delete(vendorId);
+      else next.add(vendorId);
+      return next;
+    });
+  }, []);
 
   const unplacedCount = vendors?.filter((v) => !vendorSpotMap[v.id]).length || 0;
 
@@ -172,28 +226,58 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
           boxSizing: 'border-box',
         }}
       />
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap', gap: 4 }}>
         <span className="count-label" style={{ margin: 0 }}>
           {filtered.length} of {vendors.length}
         </span>
-        {unplacedCount > 0 && (
-          <button
-            onClick={() => setFilterUnplaced(!filterUnplaced)}
-            style={{
-              background: filterUnplaced ? '#dc2626' : '#334155',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 4,
-              padding: '2px 8px',
-              fontSize: 10,
-              cursor: 'pointer',
-              fontWeight: 600,
-            }}
-          >
-            {filterUnplaced ? 'Show all' : `${unplacedCount} unplaced`}
-          </button>
-        )}
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          {hasPortalVendors && (
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              style={{
+                background: '#1e293b', color: '#e2e8f0', border: '1px solid #334155',
+                borderRadius: 4, padding: '2px 4px', fontSize: 10,
+              }}
+            >
+              <option value="all">All statuses</option>
+              <option value="applied">Applied</option>
+              <option value="approved">Approved</option>
+              <option value="waitlisted">Waitlisted</option>
+              <option value="canceled">Canceled</option>
+            </select>
+          )}
+          {unplacedCount > 0 && (
+            <button
+              onClick={() => setFilterUnplaced(!filterUnplaced)}
+              style={{
+                background: filterUnplaced ? '#dc2626' : '#334155',
+                color: '#fff', border: 'none', borderRadius: 4,
+                padding: '2px 8px', fontSize: 10, cursor: 'pointer', fontWeight: 600,
+              }}
+            >
+              {filterUnplaced ? 'Show all' : `${unplacedCount} unplaced`}
+            </button>
+          )}
+        </div>
       </div>
+      {/* Batch actions */}
+      {selectedIds.size > 0 && resolvedId && (
+        <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
+          <button onClick={handleBatchApprove} style={{
+            padding: '3px 10px', fontSize: 10, fontWeight: 600, background: '#22c55e', color: '#fff',
+            border: 'none', borderRadius: 4, cursor: 'pointer',
+          }}>
+            Approve {selectedIds.size} selected
+          </button>
+          <button onClick={() => setSelectedIds(new Set())} style={{
+            padding: '3px 10px', fontSize: 10, fontWeight: 600, background: '#475569', color: '#fff',
+            border: 'none', borderRadius: 4, cursor: 'pointer',
+          }}>
+            Clear selection
+          </button>
+        </div>
+      )}
       <div className="vendor-table-wrapper">
         <table className="vendor-table">
           <thead>
@@ -374,27 +458,55 @@ export default function VendorTable({ vendors, assignments, spots, onSelectVendo
                     )}
                   </td>
                   <td>
-                    {!isPlaced ? (
-                      <span style={{ fontSize: 9, color: '#ef4444', fontWeight: 600 }}>
-                        UNPLACED
+                    {v.status && v.status !== 'approved' ? (
+                      <span style={{
+                        fontSize: 8, padding: '2px 5px', borderRadius: 3, fontWeight: 700, color: '#fff',
+                        background: STATUS_COLORS[v.status] || '#64748b', textTransform: 'uppercase',
+                      }}>
+                        {v.status}
                       </span>
-                    ) : currentProjectId && (
-                      <button
-                        title="Copy share link"
-                        onClick={(e) => handleShare(e, v.id)}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          cursor: 'pointer',
-                          fontSize: 12,
-                          color: copiedVendorId === v.id ? '#34d399' : '#64748b',
-                          padding: '0 2px',
-                          lineHeight: 1,
-                        }}
-                      >
-                        {copiedVendorId === v.id ? 'Copied!' : '🔗'}
-                      </button>
+                    ) : !isPlaced ? (
+                      <span style={{ fontSize: 9, color: '#ef4444', fontWeight: 600 }}>UNPLACED</span>
+                    ) : (
+                      <span style={{ fontSize: 8, padding: '2px 5px', borderRadius: 3, fontWeight: 700, color: '#fff', background: '#22c55e' }}>PLACED</span>
                     )}
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                      {v.status === 'applied' && resolvedId && (
+                        <>
+                          <input type="checkbox" checked={selectedIds.has(v.id)} onChange={(e) => toggleSelect(e, v.id)}
+                            onClick={(e) => e.stopPropagation()} style={{ margin: 0 }} />
+                          <button onClick={(e) => handleStatusChange(e, v.id, 'approved')} title="Approve"
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: '#22c55e', padding: '0 2px', fontWeight: 700 }}>
+                            A
+                          </button>
+                          <button onClick={(e) => handleStatusChange(e, v.id, 'waitlisted')} title="Waitlist"
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: '#eab308', padding: '0 2px', fontWeight: 700 }}>
+                            W
+                          </button>
+                        </>
+                      )}
+                      {v.status === 'waitlisted' && resolvedId && (
+                        <button onClick={(e) => handleStatusChange(e, v.id, 'approved')} title="Approve"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: '#22c55e', padding: '0 2px', fontWeight: 700 }}>
+                          A
+                        </button>
+                      )}
+                      {v.status !== 'canceled' && resolvedId && v.status && v.status !== 'approved' && (
+                        <button onClick={(e) => handleStatusChange(e, v.id, 'canceled')} title="Cancel"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: '#ef4444', padding: '0 2px', fontWeight: 700 }}>
+                          X
+                        </button>
+                      )}
+                      {isPlaced && resolvedId && (
+                        <button title="Copy share link" onClick={(e) => handleShare(e, v.id)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11,
+                            color: copiedVendorId === v.id ? '#34d399' : '#64748b', padding: '0 2px', lineHeight: 1 }}>
+                          {copiedVendorId === v.id ? '!' : 'S'}
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );

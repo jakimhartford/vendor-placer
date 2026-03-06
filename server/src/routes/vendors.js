@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { parseVendorCsv } from '../services/csvService.js';
 import { getSession } from '../state/sessionStore.js';
+import Event from '../models/Event.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,13 +18,27 @@ export function getVendors(userId) {
   return getSession(userId).vendors;
 }
 
-/** Replace vendors for a user session (used by projects) */
+/** Replace vendors for a user session (used by layouts/events) */
 export function setVendors(userId, v) {
   getSession(userId).vendors = v;
 }
 
+/** Persist session vendors to the current event in DB */
+async function persistVendorsToEvent(userId) {
+  const session = getSession(userId);
+  if (!session.currentEventId) return;
+  try {
+    await Event.findByIdAndUpdate(session.currentEventId, {
+      vendors: session.vendors,
+      $currentDate: { updatedAt: true },
+    });
+  } catch {
+    // best-effort persist
+  }
+}
+
 // POST /api/vendors/upload — parse CSV and store vendors
-vendorRoutes.post('/upload', (req, res) => {
+vendorRoutes.post('/upload', async (req, res) => {
   try {
     const { csvData } = req.body;
     if (!csvData || typeof csvData !== 'string') {
@@ -41,6 +56,9 @@ vendorRoutes.post('/upload', (req, res) => {
     const session = getSession(req.user.id);
     session.vendors = newVendors;
 
+    // Persist to event
+    await persistVendorsToEvent(req.user.id);
+
     return res.json({
       message: `Imported ${session.vendors.length} vendors`,
       count: session.vendors.length,
@@ -57,15 +75,16 @@ vendorRoutes.get('/', (req, res) => {
 });
 
 // DELETE /api/vendors — clear all vendors
-vendorRoutes.delete('/', (req, res) => {
+vendorRoutes.delete('/', async (req, res) => {
   const session = getSession(req.user.id);
   const count = session.vendors.length;
   session.vendors = [];
+  await persistVendorsToEvent(req.user.id);
   return res.json({ message: `Cleared ${count} vendors` });
 });
 
 // PATCH /api/vendors/:id — update a vendor's fields
-vendorRoutes.patch('/:id', (req, res) => {
+vendorRoutes.patch('/:id', async (req, res) => {
   const session = getSession(req.user.id);
   const idx = session.vendors.findIndex((v) => v.id === req.params.id);
   if (idx === -1) {
@@ -79,6 +98,7 @@ vendorRoutes.patch('/:id', (req, res) => {
       session.vendors[idx][key] = updates[key];
     }
   }
+  await persistVendorsToEvent(req.user.id);
   return res.json(session.vendors[idx]);
 });
 
