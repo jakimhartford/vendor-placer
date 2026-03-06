@@ -710,10 +710,10 @@ export default function App() {
         <CollapsibleSection title="Results & Export">
           <PlacementStats placements={placements} vendors={vendors} />
           <ExportPdfButton
-            mapRef={mapRef}
             spots={spots}
             vendors={vendors}
             assignments={placements.assignments}
+            deadZones={deadZones}
             pricingConfig={pricingConfig}
           />
         </CollapsibleSection>

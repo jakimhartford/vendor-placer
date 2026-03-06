@@ -16,7 +16,7 @@ body,
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
     'Helvetica Neue', Arial, sans-serif;
   font-size: 14px;
-  color: #e2e8f0;
+  color: #1e293b;
 }
 
 /* ---------- Layout ---------- */
@@ -143,7 +143,8 @@ body,
   position: relative;
 }
 
-.file-input-wrapper input[type='file'] {
+.sidebar .file-input-wrapper input[type='file'],
+.app-layout .file-input-wrapper input[type='file'] {
   width: 100%;
   padding: 8px;
   background: #16213e;
@@ -153,7 +154,8 @@ body,
   font-size: 12px;
 }
 
-textarea {
+.sidebar textarea,
+.app-layout textarea {
   width: 100%;
   padding: 8px;
   background: #16213e;
@@ -166,11 +168,13 @@ textarea {
   min-height: 60px;
 }
 
-textarea::placeholder {
+.sidebar textarea::placeholder,
+.app-layout textarea::placeholder {
   color: #475569;
 }
 
-select {
+.sidebar select,
+.app-layout select {
   width: 100%;
   padding: 8px;
   background: #16213e;
