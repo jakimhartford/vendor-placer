@@ -63,6 +63,10 @@ export function deleteEvent(id) {
   return api.delete(`/api/events/${id}`).then((res) => res.data);
 }
 
+export function duplicateEvent(id, options) {
+  return api.post(`/api/events/${id}/duplicate`, options || {}).then((res) => res.data);
+}
+
 // ---------- Layouts ----------
 
 export function fetchLayouts(eventId) {

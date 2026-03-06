@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchEvents, createEvent, deleteEvent } from '../api/index.js';
+import { fetchEvents, createEvent, deleteEvent, duplicateEvent } from '../api/index.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 
 export default function EventsPage() {
@@ -30,6 +30,13 @@ export default function EventsPage() {
     await createEvent({ name: newName.trim() });
     setNewName('');
     setShowNew(false);
+    await load();
+  };
+
+  const handleDuplicate = async (e, id, name) => {
+    e.stopPropagation();
+    const includeVendors = confirm('Include vendors from the original event?');
+    await duplicateEvent(id, { includeVendors });
     await load();
   };
 
@@ -148,16 +155,29 @@ export default function EventsPage() {
                     </span>
                   </div>
                 </div>
-                <button
-                  onClick={(e) => handleDelete(e, ev.id)}
-                  style={{
-                    padding: '4px 12px', fontSize: 11, fontWeight: 600,
-                    background: 'transparent', color: '#ef4444', border: '1px solid #ef4444',
-                    borderRadius: 6, cursor: 'pointer',
-                  }}
-                >
-                  Delete
-                </button>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button
+                    onClick={(e) => handleDuplicate(e, ev.id, ev.name)}
+                    style={{
+                      padding: '4px 12px', fontSize: 11, fontWeight: 600,
+                      background: '#334155', color: '#e2e8f0', border: 'none',
+                      borderRadius: 6, cursor: 'pointer',
+                    }}
+                    title="Duplicate event for next year"
+                  >
+                    Duplicate
+                  </button>
+                  <button
+                    onClick={(e) => handleDelete(e, ev.id)}
+                    style={{
+                      padding: '4px 12px', fontSize: 11, fontWeight: 600,
+                      background: 'transparent', color: '#ef4444', border: '1px solid #ef4444',
+                      borderRadius: 6, cursor: 'pointer',
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
           ))}

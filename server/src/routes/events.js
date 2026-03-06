@@ -112,6 +112,49 @@ eventRoutes.put('/:id', async (req, res) => {
   }
 });
 
+// POST /api/events/:id/duplicate — duplicate event for next year
+eventRoutes.post('/:id/duplicate', async (req, res) => {
+  try {
+    const source = await Event.findOne({ _id: req.params.id, owner: req.user.id });
+    if (!source) return res.status(404).json({ error: 'Event not found' });
+
+    const { includeVendors } = req.body || {};
+
+    // Generate new name (e.g., "DBAF26" -> "DBAF26 (Copy)" or user can rename)
+    const newName = req.body.name || `${source.name} (Copy)`;
+
+    const duplicate = await Event.create({
+      owner: req.user.id,
+      name: newName,
+      infoSections: source.infoSections,
+      settings: source.settings,
+      vendors: includeVendors ? source.vendors.map((v) => ({
+        ...v,
+        status: 'approved',
+        spotPreferences: [],
+        appliedAt: null,
+      })) : [],
+      vendorPortal: {
+        enabled: false,
+        inviteToken: null,
+        maxSpotChoices: source.vendorPortal?.maxSpotChoices || 3,
+        signupDeadline: null,
+        instructions: source.vendorPortal?.instructions || '',
+        requirePayment: source.vendorPortal?.requirePayment || false,
+      },
+    });
+
+    return res.json({
+      id: duplicate._id,
+      name: duplicate.name,
+      createdAt: duplicate.createdAt,
+      updatedAt: duplicate.updatedAt,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // DELETE /api/events/:id — delete event + all layouts
 eventRoutes.delete('/:id', async (req, res) => {
   try {
