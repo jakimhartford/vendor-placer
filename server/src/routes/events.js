@@ -53,6 +53,7 @@ eventRoutes.get('/:id', async (req, res) => {
       vendors: event.vendors,
       vendorPortal: event.vendorPortal || null,
       settings: event.settings,
+      infoSections: event.infoSections || [],
       activeLayoutId: event.activeLayoutId,
       layouts: layouts.map((l) => ({
         id: l._id,
@@ -95,9 +96,10 @@ eventRoutes.put('/:id', async (req, res) => {
     const event = await Event.findOne({ _id: req.params.id, owner: req.user.id });
     if (!event) return res.status(404).json({ error: 'Event not found' });
 
-    const { name, settings } = req.body;
+    const { name, settings, infoSections } = req.body;
     if (name) event.name = name;
     if (settings) event.settings = settings;
+    if (infoSections) event.infoSections = infoSections;
     await event.save();
 
     return res.json({

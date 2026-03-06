@@ -60,7 +60,7 @@ export default function ElementPalette({
           </button>
         )}
 
-        <label style={{ fontSize: 10, color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }} title="Toggle zone layer visibility">
+        <label data-tour="map-zones" style={{ fontSize: 10, color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }} title="Toggle zone layer visibility">
           <input type="checkbox" checked={mapZonesVisible} onChange={onToggleMapZonesVisible} />
           Zones{mapZoneCount > 0 ? ` (${mapZoneCount})` : ''}
         </label>

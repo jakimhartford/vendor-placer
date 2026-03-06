@@ -5,6 +5,15 @@ import {
   fetchLayouts, createLayout, duplicateLayout, deleteLayout,
 } from '../api/index.js';
 
+const SECTION_HELP = {
+  eventInfo: 'Describe your event \u2014 dates, location, theme, highlights, and what makes it special.',
+  generalInfo: 'Awards, fees, application requirements, media categories, and other key details for applicants.',
+  boothInfo: 'Booth sizes, pricing, tent requirements, setup/teardown times, and electricity details.',
+  rulesRegulations: 'Buy/sell policies, participation requirements, prohibited items, sales tax info.',
+  refundPolicy: 'Cancellation deadlines, partial refunds, non-refundable deposits, and transfer policies.',
+  juryDetails: 'Jury process, scoring criteria, number of jurors, how applications are reviewed.',
+};
+
 export default function EventDashboardPage() {
   const { eventId } = useParams();
   const navigate = useNavigate();
@@ -15,6 +24,9 @@ export default function EventDashboardPage() {
   const [newLayoutName, setNewLayoutName] = useState('');
   const [editingName, setEditingName] = useState(false);
   const [eventName, setEventName] = useState('');
+  const [activeTab, setActiveTab] = useState('layouts');
+  const [infoSections, setInfoSections] = useState([]);
+  const [expandedSections, setExpandedSections] = useState({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -25,6 +37,7 @@ export default function EventDashboardPage() {
       ]);
       setEvent(ev);
       setEventName(ev.name);
+      setInfoSections(ev.infoSections || []);
       setLayouts(lays);
     } catch {
       // handle error
@@ -65,6 +78,22 @@ export default function EventDashboardPage() {
       setEvent((prev) => ({ ...prev, name: eventName.trim() }));
     }
     setEditingName(false);
+  };
+
+  const toggleSection = (key) => {
+    setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleSectionChange = (key, value) => {
+    setInfoSections((prev) => prev.map((s) => s.key === key ? { ...s, content: value } : s));
+  };
+
+  const handleSectionBlur = async () => {
+    try {
+      await updateEvent(eventId, { infoSections });
+    } catch {
+      // silent save error
+    }
   };
 
   if (loading) {
@@ -144,8 +173,78 @@ export default function EventDashboardPage() {
           </div>
         </div>
 
+        {/* Tab toggle */}
+        <div style={{ display: 'flex', gap: 0, marginBottom: 24, borderRadius: 8, overflow: 'hidden', border: '1px solid #334155', width: 'fit-content' }}>
+          <button
+            onClick={() => setActiveTab('layouts')}
+            style={{
+              padding: '8px 20px', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer',
+              background: activeTab === 'layouts' ? '#3b82f6' : '#1e293b',
+              color: activeTab === 'layouts' ? '#fff' : '#94a3b8',
+            }}
+          >
+            Layouts
+          </button>
+          <button
+            onClick={() => setActiveTab('eventInfo')}
+            style={{
+              padding: '8px 20px', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer',
+              background: activeTab === 'eventInfo' ? '#3b82f6' : '#1e293b',
+              color: activeTab === 'eventInfo' ? '#fff' : '#94a3b8',
+            }}
+          >
+            Event Info
+          </button>
+        </div>
+
+        {/* Event Info Sections */}
+        {activeTab === 'eventInfo' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {infoSections.map((section) => (
+              <div key={section.key} style={{
+                background: '#1e293b', borderRadius: 12, border: '1px solid #334155', overflow: 'hidden',
+              }}>
+                <button
+                  onClick={() => toggleSection(section.key)}
+                  style={{
+                    width: '100%', padding: '14px 20px', background: 'none', border: 'none',
+                    color: '#e2e8f0', fontSize: 15, fontWeight: 600, cursor: 'pointer',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    textAlign: 'left',
+                  }}
+                >
+                  <span>{section.title}</span>
+                  <span style={{ fontSize: 12, color: '#64748b' }}>
+                    {expandedSections[section.key] ? '\u25B2' : '\u25BC'}
+                  </span>
+                </button>
+                {expandedSections[section.key] && (
+                  <div style={{ padding: '0 20px 16px' }}>
+                    <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 10px' }}>
+                      {SECTION_HELP[section.key] || ''}
+                    </p>
+                    <textarea
+                      value={section.content}
+                      onChange={(e) => handleSectionChange(section.key, e.target.value)}
+                      onBlur={handleSectionBlur}
+                      rows={6}
+                      style={{
+                        width: '100%', padding: '10px 12px', fontSize: 14,
+                        background: '#0f172a', color: '#e2e8f0', border: '1px solid #334155',
+                        borderRadius: 8, resize: 'vertical', boxSizing: 'border-box',
+                        fontFamily: 'inherit', lineHeight: 1.5,
+                      }}
+                      placeholder={`Enter ${section.title.toLowerCase()} here...`}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Create new layout */}
-        {showNewLayout ? (
+        {activeTab === 'layouts' && showNewLayout ? (
           <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
             <input
               type="text"
@@ -180,7 +279,7 @@ export default function EventDashboardPage() {
               Cancel
             </button>
           </div>
-        ) : (
+        ) : activeTab === 'layouts' ? (
           <button
             onClick={() => setShowNewLayout(true)}
             style={{
@@ -191,9 +290,11 @@ export default function EventDashboardPage() {
           >
             + New Layout
           </button>
-        )}
+        ) : null}
 
         {/* Layouts list */}
+        {activeTab === 'layouts' && (
+        <>
         {layouts.length === 0 && (
           <div style={{
             textAlign: 'center', padding: '60px 20px', background: '#1e293b',
@@ -266,6 +367,8 @@ export default function EventDashboardPage() {
             );
           })}
         </div>
+        </>
+        )}
       </div>
     </div>
   );

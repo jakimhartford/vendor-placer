@@ -14,6 +14,7 @@ const EventDashboardPage = lazy(() => import('./pages/EventDashboardPage.jsx'));
 const CheckInPage = lazy(() => import('./pages/CheckInPage.jsx'));
 const VendorPortal = lazy(() => import('./pages/VendorPortal.jsx'));
 const VendorStatus = lazy(() => import('./pages/VendorStatus.jsx'));
+const HelpPage = lazy(() => import('./pages/HelpPage.jsx'));
 
 const loading = (bg = '#0f172a', color = '#94a3b8') => (
   <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: bg, color }}>Loading...</div>
@@ -62,6 +63,13 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             <ProtectedRoute>
               <Suspense fallback={loading()}>
                 <CheckInPage />
+              </Suspense>
+            </ProtectedRoute>
+          } />
+          <Route path="/help" element={
+            <ProtectedRoute>
+              <Suspense fallback={loading()}>
+                <HelpPage />
               </Suspense>
             </ProtectedRoute>
           } />

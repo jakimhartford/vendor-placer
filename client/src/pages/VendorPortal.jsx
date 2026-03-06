@@ -62,6 +62,45 @@ function SpotPicker({ spots, selected, maxChoices, onChange }) {
   );
 }
 
+function InfoSectionsDisplay({ sections }) {
+  const [expanded, setExpanded] = useState({});
+  const filled = (sections || []).filter((s) => s.content && s.content.trim());
+  if (!filled.length) return null;
+
+  return (
+    <div style={{ marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {filled.map((section) => (
+        <div key={section.key} style={{
+          background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', overflow: 'hidden',
+        }}>
+          <button
+            onClick={() => setExpanded((prev) => ({ ...prev, [section.key]: !prev[section.key] }))}
+            style={{
+              width: '100%', padding: '12px 16px', background: 'none', border: 'none',
+              fontSize: 14, fontWeight: 600, cursor: 'pointer', textAlign: 'left',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              color: '#1e293b',
+            }}
+          >
+            <span>{section.title}</span>
+            <span style={{ fontSize: 11, color: '#94a3b8' }}>
+              {expanded[section.key] ? '\u25B2' : '\u25BC'}
+            </span>
+          </button>
+          {expanded[section.key] && (
+            <div style={{
+              padding: '0 16px 14px', fontSize: 14, color: '#334155',
+              whiteSpace: 'pre-wrap', lineHeight: 1.6,
+            }}>
+              {section.content}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function VendorPortal() {
   const { inviteToken } = useParams();
   const [portalInfo, setPortalInfo] = useState(null);
@@ -303,6 +342,8 @@ export default function VendorPortal() {
             {portalInfo.instructions}
           </div>
         )}
+
+        <InfoSectionsDisplay sections={portalInfo?.infoSections} />
 
         {portalInfo?.signupDeadline && (
           <div style={{ fontSize: 13, color: '#dc2626', marginBottom: 16 }}>

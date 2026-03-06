@@ -16,6 +16,13 @@ const STEPS = [
     position: 'right',
   },
   {
+    id: 'vendor-table',
+    target: '[data-tour="vendors"]',
+    title: 'Manage Vendors',
+    body: 'View all your vendors, edit their details, set tiers and categories. Use the status column to manage approvals from the vendor portal.',
+    position: 'right',
+  },
+  {
     id: 'draw-street',
     target: '[data-tour="draw-street"]',
     title: 'Draw Streets',
@@ -41,6 +48,13 @@ const STEPS = [
     target: '[data-tour="dead-zones"]',
     title: 'Dead Zones & Amenities',
     body: 'Expand "Zones & Amenities" to draw dead zones (areas where no spots can go), place amenities like power or water, and mark access points for logistics.',
+    position: 'right',
+  },
+  {
+    id: 'map-zones',
+    target: '[data-tour="map-zones"]',
+    title: 'Map Zones',
+    body: 'Draw barricades, fencing, and other zone overlays. These are visual elements that help communicate the layout to your team.',
     position: 'right',
   },
   {
@@ -79,6 +93,13 @@ const STEPS = [
     position: 'right',
   },
   {
+    id: 'vendor-portal',
+    target: '[data-tour="vendor-portal"]',
+    title: 'Vendor Portal',
+    body: 'Enable self-service registration for vendors. They can apply, pick preferred spots, and track their status via a unique invite link.',
+    position: 'right',
+  },
+  {
     id: 'project-bar',
     target: '[data-tour="project-bar"]',
     title: 'Save & Projects',
@@ -89,7 +110,7 @@ const STEPS = [
     id: 'done',
     target: null,
     title: "You're all set!",
-    body: 'You can restart this tutorial anytime by clicking the "?" help button in the sidebar.',
+    body: 'You can restart this tutorial anytime from the "?" button, or visit the Help Center for detailed documentation.',
     position: 'center',
   },
 ];

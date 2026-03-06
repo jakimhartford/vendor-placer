@@ -549,6 +549,16 @@ export default function App() {
               >
                 ?
               </button>
+              <span
+                onClick={() => navigate('/help')}
+                title="Help Center"
+                style={{
+                  fontSize: 11, color: '#94a3b8', cursor: 'pointer', textDecoration: 'underline',
+                  textUnderlineOffset: 2,
+                }}
+              >
+                Help
+              </span>
               <button
                 onClick={logout}
                 title="Logout"
@@ -709,7 +719,7 @@ export default function App() {
           />
         </CollapsibleSection>
 
-        <CollapsibleSection title="Vendor Portal" defaultOpen={false}>
+        <CollapsibleSection title="Vendor Portal" defaultOpen={false} dataTour="vendor-portal">
           <VendorPortalConfig
             eventId={eventId}
             vendors={vendors}
@@ -718,7 +728,7 @@ export default function App() {
           />
         </CollapsibleSection>
 
-        <CollapsibleSection title="Vendors" defaultOpen={false}>
+        <CollapsibleSection title="Vendors" defaultOpen={false} dataTour="vendors">
           <VendorTable
             vendors={vendors}
             assignments={placements.assignments}

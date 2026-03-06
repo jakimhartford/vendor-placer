@@ -33,6 +33,21 @@ const eventSchema = new mongoose.Schema({
     noSameAdjacentCategories: { type: [String], default: ['art', 'craft', 'jewelry', 'clothing'] },
     pricingConfig: { type: Object, default: null },
   },
+  infoSections: {
+    type: [{
+      key: String,
+      title: String,
+      content: { type: String, default: '' },
+    }],
+    default: [
+      { key: 'eventInfo', title: 'Event Information', content: '' },
+      { key: 'generalInfo', title: 'General Information', content: '' },
+      { key: 'boothInfo', title: 'Booth Information', content: '' },
+      { key: 'rulesRegulations', title: 'Rules & Regulations', content: '' },
+      { key: 'refundPolicy', title: 'Refund Policy', content: '' },
+      { key: 'juryDetails', title: 'Jury Details', content: '' },
+    ],
+  },
   activeLayoutId: {
     type: mongoose.Schema.Types.ObjectId,
     default: null,
