@@ -18,15 +18,15 @@ import MapZoneDrawer from './MapZoneDrawer.jsx';
 function MapSizeInvalidator() {
   const map = useMap();
   useEffect(() => {
-    // Invalidate immediately + after layout settles so Leaflet knows its true size
-    map.invalidateSize();
-    const timer = setTimeout(() => map.invalidateSize(), 200);
-    const onResize = () => map.invalidateSize();
-    window.addEventListener('resize', onResize);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('resize', onResize);
-    };
+    const container = map.getContainer();
+    // Use ResizeObserver to catch any container size change (sidebar toggle, window resize, etc.)
+    const observer = new ResizeObserver(() => {
+      map.invalidateSize({ animate: false });
+    });
+    observer.observe(container);
+    // Also invalidate immediately in case layout already settled
+    map.invalidateSize({ animate: false });
+    return () => observer.disconnect();
   }, [map]);
   return null;
 }
