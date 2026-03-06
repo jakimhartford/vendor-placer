@@ -18,12 +18,16 @@ export const TIERS = ['platinum', 'gold', 'silver', 'bronze'];
 export const SPOT_SIZE_METERS = 3.66;
 
 export const GOOGLE_TILE_STYLES = {
+  satellite: {
+    url: 'https://mt1.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',
+    label: 'Satellite',
+  },
   streets: {
     url: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
     label: 'Streets',
   },
-  satellite: {
-    url: 'https://mt1.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',
-    label: 'Satellite',
+  terrain: {
+    url: 'https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
+    label: 'Terrain',
   },
 };

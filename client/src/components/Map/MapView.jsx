@@ -44,7 +44,7 @@ export default function MapView({
   mapZones, mapZoneDrawMode, mapZoneType, onAddMapZone, onDeleteMapZone, onUpdateMapZone, onMapZoneDrawDone, mapZonesVisible,
   mapContainerRef, onBoxSelect,
 }) {
-  const [mapStyle, setMapStyle] = useState('streets');
+  const [mapStyle, setMapStyle] = useState('satellite');
   const [selectedDeadZoneId, setSelectedDeadZoneId] = useState(null);
 
   // Compute popup position from the editing spot
