@@ -9,12 +9,12 @@ import SpotPlacer from './SpotPlacer.jsx';
 import LocationSearch from './LocationSearch.jsx';
 import SpotEditPopup from './SpotEditPopup.jsx';
 import DeadZoneDrawer from './DeadZoneDrawer.jsx';
-import DeadZoneEditor from './DeadZoneEditor.jsx';
 import AmenityLayer from './AmenityLayer.jsx';
 import AmenityPlacer from './AmenityPlacer.jsx';
 import AccessPointLayer from './AccessPointLayer.jsx';
 import MapZoneLayer from './MapZoneLayer.jsx';
 import MapZoneDrawer from './MapZoneDrawer.jsx';
+import ZoneHandles from './ZoneHandles.jsx';
 
 function MapSizeInvalidator() {
   const map = useMap();
@@ -44,7 +44,7 @@ export default function MapView({
   mapContainerRef,
 }) {
   const [mapStyle, setMapStyle] = useState('streets');
-  const [editingDeadZone, setEditingDeadZone] = useState(null);
+  const [selectedDeadZoneId, setSelectedDeadZoneId] = useState(null);
 
   // Compute popup position from the editing spot
   const editPosition = editingSpot
@@ -90,71 +90,66 @@ export default function MapView({
         ))}
       </div>
       <FitBounds spots={spots} />
-      {/* Render dead zone polygons with draggable icon */}
+      {/* Render dead zone polygons with icon — click to select & show handles */}
       {(deadZones || []).map((dz) => {
         const center = [
           dz.polygon.reduce((s, p) => s + p[0], 0) / dz.polygon.length,
           dz.polygon.reduce((s, p) => s + p[1], 0) / dz.polygon.length,
         ];
+        const isSelected = selectedDeadZoneId === dz.id;
         return (
           <React.Fragment key={dz.id}>
             <Polygon
               positions={dz.polygon}
               pathOptions={{
                 color: '#dc2626',
-                weight: 2,
+                weight: isSelected ? 0 : 2,
                 fillColor: '#dc2626',
                 fillOpacity: 0.3,
                 dashArray: '8,4',
               }}
+              eventHandlers={{ click: () => setSelectedDeadZoneId(isSelected ? null : dz.id) }}
             />
             <Marker
               position={center}
               icon={L.divIcon({
                 className: '',
-                html: '<div style="font-size:22px;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.5));cursor:grab;">⛔</div>',
+                html: '<div style="font-size:22px;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.5));cursor:pointer;">⛔</div>',
                 iconSize: [28, 28],
                 iconAnchor: [14, 14],
               })}
-              draggable
-              eventHandlers={{
-                dragend: (e) => {
-                  const newCenter = e.target.getLatLng();
-                  const dLat = newCenter.lat - center[0];
-                  const dLng = newCenter.lng - center[1];
-                  const newPolygon = dz.polygon.map(([lat, lng]) => [lat + dLat, lng + dLng]);
-                  if (onUpdateDeadZone) onUpdateDeadZone(dz.id, { polygon: newPolygon });
-                },
-              }}
+              eventHandlers={{ click: () => setSelectedDeadZoneId(isSelected ? null : dz.id) }}
             >
-              <Popup>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>⛔ Dead Zone</div>
-                  <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
-                    <button
-                      onClick={() => setEditingDeadZone(dz)}
-                      style={{
-                        padding: '4px 12px', background: '#f59e0b', color: '#000',
-                        border: 'none', borderRadius: 4, fontWeight: 600, fontSize: 12,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => onRemoveDeadZone(dz.id)}
-                      style={{
-                        padding: '4px 12px', background: '#dc2626', color: '#fff',
-                        border: 'none', borderRadius: 4, fontWeight: 600, fontSize: 12,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Remove
-                    </button>
+              {!isSelected && (
+                <Popup>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>⛔ Dead Zone</div>
+                    <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                      <button
+                        onClick={() => onRemoveDeadZone(dz.id)}
+                        style={{
+                          padding: '4px 12px', background: '#dc2626', color: '#fff',
+                          border: 'none', borderRadius: 4, fontWeight: 600, fontSize: 12,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </Popup>
+                </Popup>
+              )}
             </Marker>
+            {isSelected && (
+              <ZoneHandles
+                polygon={dz.polygon}
+                color="#dc2626"
+                onUpdate={(newPolygon) => {
+                  if (onUpdateDeadZone) onUpdateDeadZone(dz.id, { polygon: newPolygon });
+                }}
+                onClose={() => setSelectedDeadZoneId(null)}
+              />
+            )}
           </React.Fragment>
         );
       })}
@@ -194,17 +189,7 @@ export default function MapView({
       <AccessPointLayer accessPoints={accessPoints} onDelete={onDeleteAccessPoint} active={accessPointPlaceMode} onPlace={onPlaceAccessPoint} />
       <MapZoneLayer mapZones={mapZones} onDelete={onDeleteMapZone} onUpdate={onUpdateMapZone} visible={mapZonesVisible} />
       <MapZoneDrawer active={mapZoneDrawMode} zoneType={mapZoneType} onAddMapZone={onAddMapZone} onDone={onMapZoneDrawDone} />
-      {editingDeadZone && (
-        <DeadZoneEditor
-          deadZone={editingDeadZone}
-          onUpdate={(id, data) => {
-            if (onUpdateDeadZone) onUpdateDeadZone(id, data);
-            setEditingDeadZone(null);
-          }}
-          onClose={() => setEditingDeadZone(null)}
-        />
-      )}
-      {editingSpot && editPosition && (
+{editingSpot && editPosition && (
         <SpotEditPopup
           spot={editingSpot}
           position={editPosition}

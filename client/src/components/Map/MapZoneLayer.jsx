@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Polygon, Tooltip, Popup, Marker } from 'react-leaflet';
 import L from 'leaflet';
+import ZoneHandles from './ZoneHandles.jsx';
 
 const ZONE_CONFIG = {
   barricade: { color: '#f97316', dash: null, weight: 2, label: 'Barricade', icon: '🚧' },
@@ -15,32 +16,20 @@ function polygonCenter(polygon) {
   return [lat, lng];
 }
 
-function ZoneItem({ zone, onDelete, onUpdate }) {
+function ZoneItem({ zone, onDelete, onUpdate, selected, onSelect }) {
   const cfg = ZONE_CONFIG[zone.type] || ZONE_CONFIG.barricade;
   const center = useMemo(() => polygonCenter(zone.polygon), [zone.polygon]);
 
-  const iconHtml = `<div style="
-    font-size: 22px; line-height: 1;
-    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5));
-    cursor: ${onUpdate ? 'grab' : 'default'};
-  ">${cfg.icon}</div>`;
-
   const divIcon = useMemo(() => L.divIcon({
     className: '',
-    html: iconHtml,
+    html: `<div style="
+      font-size: 22px; line-height: 1;
+      filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5));
+      cursor: pointer;
+    ">${cfg.icon}</div>`,
     iconSize: [28, 28],
     iconAnchor: [14, 14],
-  }), [iconHtml]);
-
-  const handleDragEnd = (e) => {
-    if (!onUpdate) return;
-    const newCenter = e.target.getLatLng();
-    const oldCenter = polygonCenter(zone.polygon);
-    const dLat = newCenter.lat - oldCenter[0];
-    const dLng = newCenter.lng - oldCenter[1];
-    const newPolygon = zone.polygon.map(([lat, lng]) => [lat + dLat, lng + dLng]);
-    onUpdate(zone.id, { polygon: newPolygon });
-  };
+  }), [cfg.icon]);
 
   return (
     <>
@@ -48,51 +37,74 @@ function ZoneItem({ zone, onDelete, onUpdate }) {
         positions={zone.polygon}
         pathOptions={{
           color: cfg.color,
-          weight: cfg.weight,
+          weight: selected ? 0 : cfg.weight,
           fillColor: cfg.color,
           fillOpacity: 0.2,
           dashArray: cfg.dash || undefined,
         }}
+        eventHandlers={{ click: () => onSelect(zone.id) }}
       >
-        <Tooltip>{cfg.label}{zone.label ? `: ${zone.label}` : ''}</Tooltip>
+        {!selected && <Tooltip>{cfg.label}{zone.label ? `: ${zone.label}` : ''}</Tooltip>}
       </Polygon>
       <Marker
         position={center}
         icon={divIcon}
-        draggable={!!onUpdate}
-        eventHandlers={{ dragend: handleDragEnd }}
+        eventHandlers={{ click: () => onSelect(zone.id) }}
       >
-        <Popup>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
-              {cfg.icon} {cfg.label}
+        {!selected && (
+          <Popup>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+                {cfg.icon} {cfg.label}
+              </div>
+              {zone.label && <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>{zone.label}</div>}
+              {zone.notes && <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 4 }}>{zone.notes}</div>}
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(zone.id); }}
+                style={{
+                  padding: '4px 12px', background: '#dc2626', color: '#fff',
+                  border: 'none', borderRadius: 4, fontWeight: 600, fontSize: 12,
+                  cursor: 'pointer',
+                }}
+              >
+                Remove
+              </button>
             </div>
-            {zone.label && <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>{zone.label}</div>}
-            {zone.notes && <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 4 }}>{zone.notes}</div>}
-            <button
-              onClick={() => onDelete(zone.id)}
-              style={{
-                padding: '4px 12px', background: '#dc2626', color: '#fff',
-                border: 'none', borderRadius: 4, fontWeight: 600, fontSize: 12,
-                cursor: 'pointer',
-              }}
-            >
-              Remove
-            </button>
-          </div>
-        </Popup>
+          </Popup>
+        )}
       </Marker>
+      {selected && onUpdate && (
+        <ZoneHandles
+          polygon={zone.polygon}
+          color={cfg.color}
+          onUpdate={(newPolygon) => onUpdate(zone.id, { polygon: newPolygon })}
+          onClose={() => onSelect(null)}
+        />
+      )}
     </>
   );
 }
 
 export default function MapZoneLayer({ mapZones, onDelete, onUpdate, visible }) {
+  const [selectedId, setSelectedId] = useState(null);
+
   if (!visible || !mapZones?.length) return null;
+
+  const handleSelect = (id) => {
+    setSelectedId((prev) => (prev === id ? null : id));
+  };
 
   return (
     <>
       {mapZones.map((zone) => (
-        <ZoneItem key={zone.id} zone={zone} onDelete={onDelete} onUpdate={onUpdate} />
+        <ZoneItem
+          key={zone.id}
+          zone={zone}
+          onDelete={onDelete}
+          onUpdate={onUpdate}
+          selected={selectedId === zone.id}
+          onSelect={handleSelect}
+        />
       ))}
     </>
   );
