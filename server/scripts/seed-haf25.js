@@ -100,16 +100,18 @@ PAYMENT OPTIONS:
 - Credit card through ZAPP application only
 - Check payable to "Halifax Art Festival" by mail
 
-FESTIVAL PLACEMENT:
-Competitive Fine Artists on Beach Street (Booths #1 - 153):
-  East-facing booths front to Esplanade Park (Booths #1 - 69)
-  West-facing booths front to shops, parking behind (Booths #70 - 153)
+FESTIVAL PLACEMENT OF ARTISTS:
+Booth size is 12 x 12 with 2 foot separating between booth spaces.
 
-Non-competing artists/crafters:
-  Esplanade Park grass, east of N. Beach Street (Booths #P1 - P19)
-  Magnolia Avenue north-facing (#154 - 186) and south-facing (#187 - 203)
+Competitive Fine Artists are placed on Beach Street (Booths #1 - 153). These artists will back up to the central median of palm trees. This location provides two placement options:
+  East-facing booths will front to the Esplanade Park (Booths #1 - 69)
+  West-facing booth spaces will front to the shops. Parking is available behind the shops (Booths #70 - 153)
 
-Corners and 'ends' locations assigned based on artist's total jury panel scores.`,
+Non-competing artists/crafters have 2 location options:
+  Esplanade Park grass located to the east-side of N. Beach Street, front facing west (Booths #P1 - P19)
+  Magnolia Avenue with north-facing (Booths #154 - 186) and south-facing positions (Booths #187 - 203)
+
+Corners and 'ends' locations assigned based on artist's total jury panel scores. The show layout is designed to ensure balance.`,
   },
   {
     key: 'boothInfo',
