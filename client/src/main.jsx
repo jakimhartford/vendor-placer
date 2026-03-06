@@ -15,6 +15,7 @@ const CheckInPage = lazy(() => import('./pages/CheckInPage.jsx'));
 const VendorPortal = lazy(() => import('./pages/VendorPortal.jsx'));
 const VendorStatus = lazy(() => import('./pages/VendorStatus.jsx'));
 const HelpPage = lazy(() => import('./pages/HelpPage.jsx'));
+const EventConfigPage = lazy(() => import('./pages/EventConfigPage.jsx'));
 
 const loading = (bg = '#0f172a', color = '#94a3b8') => (
   <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: bg, color }}>Loading...</div>
@@ -49,6 +50,13 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             <ProtectedRoute>
               <Suspense fallback={loading()}>
                 <EventDashboardPage />
+              </Suspense>
+            </ProtectedRoute>
+          } />
+          <Route path="/events/:eventId/configure" element={
+            <ProtectedRoute>
+              <Suspense fallback={loading()}>
+                <EventConfigPage />
               </Suspense>
             </ProtectedRoute>
           } />
