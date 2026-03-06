@@ -31,6 +31,8 @@ export default function EventConfigPage() {
   const [location, setLocation] = useState('');
   const [infoSections, setInfoSections] = useState([]);
   const [activeSection, setActiveSection] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [newCategory, setNewCategory] = useState('');
 
   useEffect(() => {
     setLoading(true);
@@ -40,6 +42,7 @@ export default function EventConfigPage() {
         setStartDate(ev.startDate ? new Date(ev.startDate).toISOString().slice(0, 10) : '');
         setEndDate(ev.endDate ? new Date(ev.endDate).toISOString().slice(0, 10) : '');
         setLocation(ev.location || '');
+        setCategories(ev.categories || []);
         setInfoSections(ev.infoSections || []);
         if (ev.infoSections?.length) setActiveSection(ev.infoSections[0].key);
       })
@@ -60,6 +63,7 @@ export default function EventConfigPage() {
         startDate: startDate || null,
         endDate: endDate || null,
         location,
+        categories,
         infoSections,
       });
       setSaved(true);
@@ -69,7 +73,7 @@ export default function EventConfigPage() {
     } finally {
       setSaving(false);
     }
-  }, [eventId, name, startDate, endDate, location, infoSections]);
+  }, [eventId, name, startDate, endDate, location, categories, infoSections]);
 
   // Keyboard shortcut: Cmd+S to save
   useEffect(() => {
@@ -175,6 +179,72 @@ export default function EventConfigPage() {
                 placeholder="e.g., Riverfront Esplanade, Daytona Beach, FL"
               />
             </div>
+          </div>
+        </div>
+
+        {/* Media categories */}
+        <div style={{
+          background: '#1e293b', borderRadius: 12, border: '1px solid #334155',
+          padding: 24, marginBottom: 24,
+        }}>
+          <h2 style={{ margin: '0 0 4px', fontSize: 18 }}>Media Categories</h2>
+          <p style={{ margin: '0 0 16px', fontSize: 13, color: '#64748b' }}>
+            Categories vendors can choose from when applying. These appear as a dropdown on the vendor portal.
+          </p>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+            {categories.map((cat, i) => (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '5px 10px', background: '#16213e', borderRadius: 6,
+                border: '1px solid #334155',
+              }}>
+                <span style={{ fontSize: 13, color: '#e2e8f0' }}>{cat}</span>
+                <button
+                  onClick={() => { setCategories((prev) => prev.filter((_, j) => j !== i)); setSaved(false); }}
+                  style={{
+                    background: 'none', border: 'none', color: '#64748b',
+                    cursor: 'pointer', fontSize: 14, padding: 0, lineHeight: 1,
+                  }}
+                  title="Remove"
+                >
+                  &times;
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newCategory.trim()) {
+                  setCategories((prev) => [...prev, newCategory.trim()]);
+                  setNewCategory('');
+                  setSaved(false);
+                }
+              }}
+              placeholder="Add a category..."
+              style={{ ...inputStyle, flex: 1 }}
+            />
+            <button
+              onClick={() => {
+                if (newCategory.trim()) {
+                  setCategories((prev) => [...prev, newCategory.trim()]);
+                  setNewCategory('');
+                  setSaved(false);
+                }
+              }}
+              disabled={!newCategory.trim()}
+              style={{
+                padding: '10px 20px', fontSize: 14, fontWeight: 600,
+                background: '#3b82f6', color: '#fff', border: 'none',
+                borderRadius: 8, cursor: 'pointer', flexShrink: 0,
+              }}
+            >
+              Add
+            </button>
           </div>
         </div>
 

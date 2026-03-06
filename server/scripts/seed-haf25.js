@@ -278,6 +278,7 @@ async function seed() {
   const existing = await Event.findOne({ owner: user._id, name: eventName });
   if (existing) {
     console.log('Halifax Art Festival event already exists, updating...');
+    existing.categories = HAF_CATEGORIES;
     existing.infoSections = INFO_SECTIONS;
     existing.vendors = SAMPLE_VENDORS;
     existing.vendorPortal = {
@@ -291,12 +292,11 @@ async function seed() {
     existing.settings = {
       noSameAdjacentCategories: ['Painting', 'Jewelry', 'Photography', 'Glass', 'Sculpture'],
       pricingConfig: {
-        tiers: {
-          competitive: { base: 350, label: 'Competitive Fine Art' },
-          noncompetitive: { base: 225, label: 'Non-Competitive / Craft' },
+        mode: 'flat',
+        flatFees: {
+          competitive: { single: 350, double: 600, label: 'Competitive Fine Art' },
+          noncompetitive: { single: 225, double: 400, label: 'Non-Competitive / Craft' },
         },
-        doubleSpaceMultiplier: 1.0,
-        premiumMultiplier: 1.0,
       },
     };
     await existing.save();
@@ -305,6 +305,7 @@ async function seed() {
     const event = await Event.create({
       owner: user._id,
       name: eventName,
+      categories: HAF_CATEGORIES,
       infoSections: INFO_SECTIONS,
       vendors: SAMPLE_VENDORS,
       vendorPortal: {

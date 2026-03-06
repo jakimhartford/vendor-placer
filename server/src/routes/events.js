@@ -59,6 +59,7 @@ eventRoutes.get('/:id', async (req, res) => {
       vendors: event.vendors,
       vendorPortal: event.vendorPortal || null,
       settings: event.settings,
+      categories: event.categories || [],
       infoSections: event.infoSections || [],
       activeLayoutId: event.activeLayoutId,
       layouts: layouts.map((l) => ({
@@ -109,6 +110,7 @@ eventRoutes.put('/:id', async (req, res) => {
     if (startDate !== undefined) event.startDate = startDate || null;
     if (endDate !== undefined) event.endDate = endDate || null;
     if (location !== undefined) event.location = location;
+    if (req.body.categories) event.categories = req.body.categories;
     await event.save();
 
     return res.json({
@@ -135,6 +137,7 @@ eventRoutes.post('/:id/duplicate', async (req, res) => {
       owner: req.user.id,
       name: newName,
       location: source.location,
+      categories: source.categories,
       infoSections: source.infoSections,
       settings: source.settings,
       vendors: includeVendors ? source.vendors.map((v) => ({

@@ -276,6 +276,7 @@ async function seed() {
   const existing = await Event.findOne({ owner: user._id, name: 'DBAF26: Daytona Beach Arts Fest' });
   if (existing) {
     console.log('DBAF26 event already exists, updating...');
+    existing.categories = DBAF_CATEGORIES;
     existing.infoSections = INFO_SECTIONS;
     existing.vendors = SAMPLE_VENDORS;
     existing.vendorPortal = {
@@ -289,13 +290,12 @@ async function seed() {
     existing.settings = {
       noSameAdjacentCategories: ['Painting', 'Jewelry', 'Photography', 'Glass Art', 'Sculpture'],
       pricingConfig: {
-        tiers: {
-          juried: { base: 250, label: 'Juried Fine Artist' },
-          nonjuried: { base: 175, label: 'Non-Juried / Marketplace' },
-          emergent: { base: 75, label: 'Emergent Artist (Student)' },
+        mode: 'flat',
+        flatFees: {
+          juried: { single: 250, double: 425, label: 'Juried Fine Artist' },
+          nonjuried: { single: 175, double: 275, label: 'Non-Juried / Marketplace' },
+          emergent: { single: 75, double: 75, label: 'Emergent Artist (Student)' },
         },
-        doubleSpaceMultiplier: 1.7,
-        premiumMultiplier: 1.0,
       },
     };
     await existing.save();
@@ -304,6 +304,7 @@ async function seed() {
     const event = await Event.create({
       owner: user._id,
       name: 'DBAF26: Daytona Beach Arts Fest',
+      categories: DBAF_CATEGORIES,
       infoSections: INFO_SECTIONS,
       vendors: SAMPLE_VENDORS,
       vendorPortal: {

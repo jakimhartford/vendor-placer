@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { fetchPortalInfo, applyToPortal, fetchVendorStatus, updateVendorProfile, cancelVendorApplication } from '../api/index.js';
 
-const CATEGORIES = ['food', 'art', 'craft', 'jewelry', 'clothing', 'services', 'other'];
+const DEFAULT_CATEGORIES = ['food', 'art', 'craft', 'jewelry', 'clothing', 'services', 'other'];
 
 const inputStyle = {
   width: '100%', padding: '8px 12px', fontSize: 14,
@@ -357,7 +357,7 @@ export default function VendorPortal() {
 
           <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 4 }}>Category</label>
           <select value={form.category} onChange={updateField('category')} style={inputStyle}>
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            {(portalInfo?.categories?.length ? portalInfo.categories : DEFAULT_CATEGORIES).map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
 
           <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 4 }}>Email</label>

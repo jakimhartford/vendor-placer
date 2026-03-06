@@ -121,6 +121,7 @@ vendorPortalRoutes.get('/:inviteToken', async (req, res) => {
       eventName: event.name,
       projectName: event.name, // backward compat
       instructions: event.vendorPortal.instructions || '',
+      categories: event.categories || [],
       infoSections: event.infoSections || [],
       maxSpotChoices: event.vendorPortal.maxSpotChoices || 3,
       signupDeadline: event.vendorPortal.signupDeadline,

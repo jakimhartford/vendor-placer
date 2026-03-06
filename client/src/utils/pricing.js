@@ -1,4 +1,11 @@
 export const DEFAULT_PRICING_CONFIG = {
+  mode: 'flat', // 'flat' or 'multiplier'
+  // Flat fee mode: price per vendor tier, with optional double-space price
+  flatFees: {
+    competitive: { single: 350, double: 600, label: 'Competitive Fine Art' },
+    noncompetitive: { single: 225, double: 400, label: 'Non-Competitive / Craft' },
+  },
+  // Multiplier mode (legacy)
   basePriceByType: { regular: 100, corner: 200, premium: 300 },
   tierMultipliers: { platinum: 2.0, gold: 1.5, silver: 1.0, bronze: 0.8 },
   categoryMultipliers: { food: 1.2, art: 1.0, craft: 1.0, jewelry: 1.0, clothing: 1.0, services: 0.9, other: 0.8 },
@@ -15,7 +22,27 @@ function scoreMultiplier(valueScore) {
 
 export function calculateSpotPrice(spotProps, vendor, config) {
   if (!config) return null;
-  // Score-based tier override: >=80 premium, >=50 corner, else regular
+
+  // Flat fee mode
+  if (config.mode === 'flat' && config.flatFees) {
+    const tier = vendor?.tier || Object.keys(config.flatFees)[0];
+    const feeEntry = config.flatFees[tier];
+    if (!feeEntry) {
+      // Try to find a matching tier (case-insensitive)
+      const match = Object.entries(config.flatFees).find(
+        ([k]) => k.toLowerCase() === (tier || '').toLowerCase()
+      );
+      if (match) {
+        const isDouble = (vendor?.boothSize || 1) >= 2;
+        return isDouble && match[1].double ? match[1].double : match[1].single;
+      }
+      return null;
+    }
+    const isDouble = (vendor?.boothSize || 1) >= 2;
+    return isDouble && feeEntry.double ? feeEntry.double : feeEntry.single;
+  }
+
+  // Multiplier mode (legacy)
   let typeKey;
   if (spotProps.valueScore != null) {
     typeKey = spotProps.valueScore >= 80 ? 'premium' : spotProps.valueScore >= 50 ? 'corner' : 'regular';
@@ -53,7 +80,7 @@ export function calculateRevenueSummary(spots, vendors, assignments, config) {
 
     total += price;
 
-    const tier = vendor.tier || 'bronze';
+    const tier = vendor.tier || 'other';
     byTier[tier] = (byTier[tier] || 0) + price;
 
     const cat = vendor.category || 'other';
