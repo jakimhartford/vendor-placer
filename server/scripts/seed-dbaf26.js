@@ -224,33 +224,66 @@ Am I allowed to observe the jury process? Jury process is open for all dates`,
   },
 ];
 
-// Sample vendors representing a realistic mix of DBAF applicants
+// Sample vendors — covers every DBAF category, includes double-space participants
 const SAMPLE_VENDORS = [
-  { name: 'Maria Gonzalez', category: 'Painting', tier: 'juried', email: 'maria.g@example.com', businessName: 'Maria Gonzalez Fine Art', description: 'Contemporary acrylic landscapes inspired by Florida coastlines', boothSize: 1, status: 'approved' },
-  { name: 'James Chen', category: 'Photography', tier: 'juried', email: 'jchen@example.com', businessName: 'Chen Photography', description: 'Fine art black & white nature photography', boothSize: 1, status: 'approved' },
-  { name: 'Aisha Williams', category: 'Sculpture', tier: 'juried', email: 'aisha.w@example.com', businessName: 'Aisha Creates', description: 'Bronze and mixed-metal abstract sculptures', boothSize: 2, status: 'approved' },
-  { name: 'Robert Taylor', category: 'Glass Art', tier: 'juried', email: 'rtaylor@example.com', businessName: 'Taylor Glass Studio', description: 'Hand-blown glass vessels and functional art', boothSize: 1, status: 'approved' },
-  { name: 'Sofia Martinez', category: 'Jewelry', tier: 'juried', email: 'sofia.m@example.com', businessName: 'Sol & Luna Jewelry', description: 'Sterling silver and semi-precious gemstone jewelry', boothSize: 1, status: 'approved' },
-  { name: 'David Kim', category: 'Mixed Media', tier: 'juried', email: 'dkim@example.com', businessName: 'DK Art Studio', description: 'Layered collage and assemblage works on wood panels', boothSize: 1, status: 'approved' },
-  { name: 'Emily Brooks', category: 'Drawing', tier: 'juried', email: 'emily.b@example.com', businessName: 'Brooks Illustration', description: 'Graphite and charcoal botanical illustrations', boothSize: 1, status: 'approved' },
+  // === Juried Fine Artists ===
+  // Painting (4 — popular category)
+  { name: 'Maria Gonzalez', category: 'Painting', tier: 'juried', email: 'maria.g@example.com', businessName: 'Maria Gonzalez Fine Art', description: 'Contemporary acrylic landscapes inspired by Florida coastlines', boothSize: 2, status: 'approved' },
   { name: 'Marcus Johnson', category: 'Painting', tier: 'juried', email: 'marcus.j@example.com', businessName: 'MJ Art', description: 'Large-scale oil paintings of urban landscapes', boothSize: 2, status: 'approved' },
-  { name: 'Lisa Park', category: 'Textiles / Fiber Arts', tier: 'nonjuried', email: 'lisa.p@example.com', businessName: 'Woven Dreams', description: 'Hand-woven tapestries and fiber wall hangings', boothSize: 1, status: 'approved' },
-  { name: 'Carlos Rivera', category: 'Sculpture', tier: 'juried', email: 'carlos.r@example.com', businessName: 'Rivera Metal Works', description: 'Welded steel outdoor sculptures and garden art', boothSize: 2, status: 'approved' },
-  { name: 'Hannah White', category: 'Graphic Design / Digital Art', tier: 'nonjuried', email: 'hannah.w@example.com', businessName: 'Pixel & Print', description: 'Limited edition digital art prints and posters', boothSize: 1, status: 'approved' },
+  { name: 'Naomi Scott', category: 'Painting', tier: 'juried', email: 'naomi.s@example.com', businessName: 'Naomi Scott Art', description: 'Watercolor portraits and figure studies', boothSize: 1, status: 'approved' },
+  { name: 'Victor Reyes', category: 'Painting', tier: 'juried', email: 'victor.r@example.com', businessName: 'Reyes Studio', description: 'Plein air oil landscapes of Florida waterways', boothSize: 1, status: 'approved' },
+  // Photography (3)
+  { name: 'James Chen', category: 'Photography', tier: 'juried', email: 'jchen@example.com', businessName: 'Chen Photography', description: 'Fine art black & white nature photography', boothSize: 1, status: 'approved' },
   { name: 'Thomas Moore', category: 'Photography', tier: 'juried', email: 'tmoore@example.com', businessName: 'Moore Lens', description: 'Aerial and drone photography of Florida landscapes', boothSize: 1, status: 'approved' },
+  { name: 'Nina Okafor', category: 'Photography', tier: 'juried', email: 'nina.o@example.com', businessName: 'Okafor Images', description: 'Documentary street photography, archival prints', boothSize: 1, status: 'approved' },
+  // Sculpture (3)
+  { name: 'Aisha Williams', category: 'Sculpture', tier: 'juried', email: 'aisha.w@example.com', businessName: 'Aisha Creates', description: 'Bronze and mixed-metal abstract sculptures', boothSize: 2, status: 'approved' },
+  { name: 'Carlos Rivera', category: 'Sculpture', tier: 'juried', email: 'carlos.r@example.com', businessName: 'Rivera Metal Works', description: 'Welded steel outdoor sculptures and garden art', boothSize: 2, status: 'approved' },
+  { name: 'Michael Lee', category: 'Sculpture', tier: 'juried', email: 'michael.l@example.com', businessName: 'Lee Ceramics', description: 'Wheel-thrown and hand-built ceramic vessels', boothSize: 1, status: 'approved' },
+  // Glass Art (2)
+  { name: 'Robert Taylor', category: 'Glass Art', tier: 'juried', email: 'rtaylor@example.com', businessName: 'Taylor Glass Studio', description: 'Hand-blown glass vessels and functional art', boothSize: 1, status: 'approved' },
+  { name: 'Derek Brown', category: 'Glass Art', tier: 'juried', email: 'derek.b@example.com', businessName: 'Fusion Glass Co', description: 'Fused and flameworked glass sculptures and wall pieces', boothSize: 1, status: 'approved' },
+  // Jewelry (3)
+  { name: 'Sofia Martinez', category: 'Jewelry', tier: 'juried', email: 'sofia.m@example.com', businessName: 'Sol & Luna Jewelry', description: 'Sterling silver and semi-precious gemstone jewelry', boothSize: 1, status: 'approved' },
+  { name: 'Olivia Adams', category: 'Jewelry', tier: 'juried', email: 'olivia.a@example.com', businessName: 'OA Designs', description: 'Fabricated gold and silver statement pieces', boothSize: 1, status: 'approved' },
+  { name: 'Priya Sharma', category: 'Jewelry', tier: 'juried', email: 'priya.s@example.com', businessName: 'Priya Gems', description: 'Lapidary and metalwork with Florida gemstones', boothSize: 1, status: 'approved' },
+  // Mixed Media (2)
+  { name: 'David Kim', category: 'Mixed Media', tier: 'juried', email: 'dkim@example.com', businessName: 'DK Art Studio', description: 'Layered collage and assemblage works on wood panels', boothSize: 1, status: 'approved' },
+  { name: 'Kevin Patel', category: 'Mixed Media', tier: 'juried', email: 'kevin.p@example.com', businessName: 'Patel Studio', description: 'Resin and wood hybrid wall art', boothSize: 2, status: 'approved' },
+  // Drawing (2)
+  { name: 'Emily Brooks', category: 'Drawing', tier: 'juried', email: 'emily.b@example.com', businessName: 'Brooks Illustration', description: 'Graphite and charcoal botanical illustrations', boothSize: 1, status: 'approved' },
+  { name: 'Andre Baptiste', category: 'Drawing', tier: 'juried', email: 'andre.b@example.com', businessName: 'Baptiste Art', description: 'Large-format colored pencil portraits', boothSize: 1, status: 'approved' },
+  // Graphic Design / Digital Art (1)
+  { name: 'Lena Chu', category: 'Graphic Design / Digital Art', tier: 'juried', email: 'lena.c@example.com', businessName: 'Chu Digital', description: 'Digitally composited surrealist art on aluminum', boothSize: 1, status: 'approved' },
+
+  // === Non-Juried / Marketplace ===
+  // Textiles / Fiber Arts (2)
+  { name: 'Lisa Park', category: 'Textiles / Fiber Arts', tier: 'nonjuried', email: 'lisa.p@example.com', businessName: 'Woven Dreams', description: 'Hand-woven tapestries and fiber wall hangings', boothSize: 1, status: 'approved' },
+  { name: 'Diana Cruz', category: 'Textiles / Fiber Arts', tier: 'nonjuried', email: 'diana.c@example.com', businessName: 'Stitch & Story', description: 'Quilted wall art and embroidered home goods', boothSize: 1, status: 'approved' },
+  // Fashion and Wearable Art (2)
   { name: 'Rachel Green', category: 'Fashion and Wearable Art', tier: 'nonjuried', email: 'rachel.g@example.com', businessName: 'Art to Wear', description: 'Hand-painted silk scarves and wearable art pieces', boothSize: 1, status: 'approved' },
-  { name: 'Kevin Patel', category: 'Mixed Media', tier: 'juried', email: 'kevin.p@example.com', businessName: 'Patel Studio', description: 'Resin and wood hybrid wall art', boothSize: 1, status: 'applied' },
-  { name: 'Naomi Scott', category: 'Painting', tier: 'juried', email: 'naomi.s@example.com', businessName: 'Naomi Scott Art', description: 'Watercolor portraits and figure studies', boothSize: 1, status: 'applied' },
-  { name: 'Derek Brown', category: 'Glass Art', tier: 'nonjuried', email: 'derek.b@example.com', businessName: 'Fusion Glass Co', description: 'Fused glass jewelry and decorative panels', boothSize: 1, status: 'applied' },
-  { name: 'Olivia Adams', category: 'Jewelry', tier: 'nonjuried', email: 'olivia.a@example.com', businessName: 'OA Designs', description: 'Handcrafted beaded jewelry and wire wrapping', boothSize: 1, status: 'applied' },
-  { name: 'Michael Lee', category: 'Sculpture', tier: 'juried', email: 'michael.l@example.com', businessName: 'Lee Ceramics', description: 'Wheel-thrown and hand-built ceramic vessels', boothSize: 1, status: 'applied' },
-  { name: 'Sarah Nelson', category: 'Bath & Body Products', tier: 'nonjuried', email: 'sarah.n@example.com', businessName: 'Coastal Botanicals', description: 'Handmade soaps, bath bombs, and body oils', boothSize: 1, status: 'applied' },
-  { name: 'Jake Hernandez', category: 'Painting', tier: 'emergent', email: 'jake.h@example.com', businessName: '', description: 'Student artist - abstract expressionism on canvas', boothSize: 1, status: 'applied' },
-  { name: 'Mia Thompson', category: 'Drawing', tier: 'emergent', email: 'mia.t@example.com', businessName: '', description: 'Student artist - pen and ink architectural studies', boothSize: 1, status: 'applied' },
+  { name: 'Tanya Brooks', category: 'Fashion and Wearable Art', tier: 'nonjuried', email: 'tanya.b@example.com', businessName: 'Coastal Threads', description: 'Hand-dyed beach wraps and resort wear', boothSize: 1, status: 'approved' },
+  // Bath & Body Products (2)
+  { name: 'Sarah Nelson', category: 'Bath & Body Products', tier: 'nonjuried', email: 'sarah.n@example.com', businessName: 'Coastal Botanicals', description: 'Handmade soaps, bath bombs, and body oils', boothSize: 1, status: 'approved' },
+  { name: 'Carmen Diaz', category: 'Bath & Body Products', tier: 'nonjuried', email: 'carmen.d@example.com', businessName: 'Isla Scents', description: 'Natural candles, essential oil blends, and skincare', boothSize: 1, status: 'approved' },
+  // Edibles (2)
   { name: 'Zoe Campbell', category: 'Edibles', tier: 'nonjuried', email: 'zoe.c@example.com', businessName: 'Sweet Coast Bakery', description: 'Artisan cookies, brownies, and handmade chocolates', boothSize: 1, status: 'approved' },
+  { name: 'Marco Russo', category: 'Edibles', tier: 'nonjuried', email: 'marco.r@example.com', businessName: 'Russo Olive Co', description: 'Infused olive oils, vinegars, and gourmet dips', boothSize: 1, status: 'approved' },
+  // Digital Art nonjuried (1)
+  { name: 'Hannah White', category: 'Graphic Design / Digital Art', tier: 'nonjuried', email: 'hannah.w@example.com', businessName: 'Pixel & Print', description: 'Limited edition digital art prints and posters', boothSize: 1, status: 'approved' },
+  // Other (1)
   { name: 'Paul Wright', category: 'Other', tier: 'nonjuried', email: 'paul.w@example.com', businessName: 'Wright Woodcraft', description: 'Hand-turned wooden bowls and kitchen utensils', boothSize: 1, status: 'approved' },
-  { name: 'Diana Cruz', category: 'Textiles / Fiber Arts', tier: 'nonjuried', email: 'diana.c@example.com', businessName: 'Stitch & Story', description: 'Quilted wall art and embroidered home goods', boothSize: 1, status: 'waitlisted' },
-  { name: 'Ryan Foster', category: 'Photography', tier: 'nonjuried', email: 'ryan.f@example.com', businessName: 'Foster Frames', description: 'Coastal sunset photography on canvas and metal', boothSize: 1, status: 'waitlisted' },
+
+  // === Emergent Artists (Students) ===
+  { name: 'Jake Hernandez', category: 'Painting', tier: 'emergent', email: 'jake.h@example.com', businessName: '', description: 'Student artist - abstract expressionism on canvas', boothSize: 1, status: 'approved' },
+  { name: 'Mia Thompson', category: 'Drawing', tier: 'emergent', email: 'mia.t@example.com', businessName: '', description: 'Student artist - pen and ink architectural studies', boothSize: 1, status: 'approved' },
+  { name: 'Leo Tran', category: 'Photography', tier: 'emergent', email: 'leo.t@example.com', businessName: '', description: 'Student artist - experimental double-exposure film photography', boothSize: 1, status: 'approved' },
+
+  // === Applied / Waitlisted ===
+  { name: 'Ryan Foster', category: 'Photography', tier: 'nonjuried', email: 'ryan.f@example.com', businessName: 'Foster Frames', description: 'Coastal sunset photography on canvas and metal', boothSize: 1, status: 'applied' },
+  { name: 'Angela Torres', category: 'Jewelry', tier: 'nonjuried', email: 'angela.t@example.com', businessName: 'Torres Craft', description: 'Handcrafted beaded and shell jewelry', boothSize: 1, status: 'applied' },
+  { name: 'Sam Mitchell', category: 'Mixed Media', tier: 'nonjuried', email: 'sam.m@example.com', businessName: 'Mitchell Creations', description: 'Driftwood and resin coastal-themed wall art', boothSize: 1, status: 'waitlisted' },
+  { name: 'Grace Kim', category: 'Painting', tier: 'juried', email: 'grace.k@example.com', businessName: 'Kim Art', description: 'Impressionist floral oil paintings', boothSize: 1, status: 'waitlisted' },
 ];
 
 async function seed() {

@@ -1,22 +1,44 @@
 import React, { useEffect, useRef } from 'react';
-import { Polygon, Polyline, Tooltip, useMap } from 'react-leaflet';
-import { getSpotColor } from '../../utils/tierColors.js';
+import { Polygon, Polyline, Tooltip, Marker, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import { getSpotColor, getAssignedVendor, CATEGORY_SHORT, CATEGORY_COLORS, EMPTY_COLOR } from '../../utils/tierColors.js';
 
 function featureToPositions(feature) {
-  // Convert GeoJSON [lng, lat] ring to Leaflet [lat, lng] positions
   const coords = feature.geometry.coordinates[0];
   return coords.map(([lng, lat]) => [lat, lng]);
 }
 
 function featureCenter(feature) {
   const coords = feature.geometry.coordinates[0];
-  const n = coords.length - 1; // exclude closing point
+  const n = coords.length - 1;
   let latSum = 0, lngSum = 0;
   for (let i = 0; i < n; i++) {
     lngSum += coords[i][0];
     latSum += coords[i][1];
   }
   return [latSum / n, lngSum / n];
+}
+
+function createCategoryIcon(shortLabel, color) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      font-size:9px;
+      font-weight:700;
+      color:#fff;
+      background:${color};
+      border-radius:3px;
+      padding:1px 3px;
+      text-align:center;
+      white-space:nowrap;
+      line-height:1.2;
+      border:1px solid rgba(255,255,255,0.3);
+      text-shadow:0 1px 1px rgba(0,0,0,0.5);
+      pointer-events:none;
+    ">${shortLabel}</div>`,
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+  });
 }
 
 function SelectedSpotPanner({ selectedSpotId, spots }) {
@@ -82,6 +104,7 @@ export default function SpotLayer({ spots, vendors, assignments, selectedSpotId,
         const isDeadZone = !!feature.properties?.deadZone;
         const isMoveSource = movingVendor?.sourceSpotId === spotId;
         const isMoveTarget = movingVendor && !assignedVendorId && !isDeadZone;
+        const isEmpty = !assignedVendorId && !isDeadZone;
 
         let positions;
         try {
@@ -93,7 +116,7 @@ export default function SpotLayer({ spots, vendors, assignments, selectedSpotId,
         let strokeColor = color;
         let strokeWeight = 2;
         let fill = color;
-        let fillOp = 0.35;
+        let fillOp = assignedVendor ? 0.55 : 0.15;
         let dashArray = undefined;
 
         if (isMoveSource) {
@@ -120,44 +143,81 @@ export default function SpotLayer({ spots, vendors, assignments, selectedSpotId,
         } else if (isDeadZone) {
           fillOp = 0.5;
           dashArray = '6,4';
+        } else if (isEmpty) {
+          strokeColor = '#475569';
+          fill = EMPTY_COLOR;
+          fillOp = 0.12;
+          dashArray = '3,3';
+        }
+
+        // Category label marker for assigned spots
+        let categoryMarker = null;
+        if (assignedVendor && !isMoveSource && !isSelected && !isMultiSelected) {
+          const shortLabel = CATEGORY_SHORT[assignedVendor.category] || assignedVendor.category?.slice(0, 3)?.toUpperCase() || '?';
+          const catColor = CATEGORY_COLORS[assignedVendor.category] || color;
+          try {
+            const center = featureCenter(feature);
+            categoryMarker = (
+              <Marker
+                key={`label-${spotId}`}
+                position={center}
+                icon={createCategoryIcon(shortLabel, catColor)}
+                interactive={false}
+              />
+            );
+          } catch {
+            // ignore
+          }
         }
 
         return (
-          <Polygon
-            key={spotId}
-            positions={positions}
-            pathOptions={{
-              color: strokeColor,
-              weight: strokeWeight,
-              fillColor: fill,
-              fillOpacity: fillOp,
-              dashArray,
-            }}
-            eventHandlers={{
-              click: (e) => {
-                if (onSpotClick) onSpotClick(feature, e.originalEvent);
-              },
-            }}
-          >
-            <Tooltip sticky>
-              <div style={{ fontSize: 12 }}>
-                <strong>{feature.properties?.label || `Spot ${idx + 1}`}</strong>
-                {assignedVendor ? (
-                  <>
-                    <br />
-                    {assignedVendor.name}
-                    <br />
-                    {assignedVendor.category} &middot;{' '}
-                    <span style={{ textTransform: 'capitalize' }}>
-                      {assignedVendor.tier}
-                    </span>
-                  </>
-                ) : feature.properties?.valueScore != null ? (
-                  <><br /><span style={{ color: '#94a3b8' }}>Score: {feature.properties.valueScore}</span></>
-                ) : null}
-              </div>
-            </Tooltip>
-          </Polygon>
+          <React.Fragment key={spotId}>
+            <Polygon
+              positions={positions}
+              pathOptions={{
+                color: strokeColor,
+                weight: strokeWeight,
+                fillColor: fill,
+                fillOpacity: fillOp,
+                dashArray,
+              }}
+              eventHandlers={{
+                click: (e) => {
+                  if (onSpotClick) onSpotClick(feature, e.originalEvent);
+                },
+              }}
+            >
+              <Tooltip sticky>
+                <div style={{ fontSize: 12 }}>
+                  <strong>{feature.properties?.label || `Spot ${idx + 1}`}</strong>
+                  {assignedVendor ? (
+                    <>
+                      <br />
+                      {assignedVendor.name}
+                      {assignedVendor.boothSize >= 2 && <span style={{ color: '#f59e0b' }}> (Double)</span>}
+                      <br />
+                      <span style={{ color: CATEGORY_COLORS[assignedVendor.category] || '#94a3b8' }}>
+                        {assignedVendor.category}
+                      </span>
+                      {' \u00B7 '}
+                      <span style={{ textTransform: 'capitalize' }}>
+                        {assignedVendor.tier}
+                      </span>
+                    </>
+                  ) : isDeadZone ? (
+                    <><br /><span style={{ color: '#ef4444' }}>Dead Zone</span></>
+                  ) : (
+                    <><br /><span style={{ color: '#94a3b8' }}>Empty</span>
+                    {feature.properties?.valueScore != null && (
+                      <span style={{ color: '#64748b' }}> &middot; Score: {feature.properties.valueScore}</span>
+                    )}
+                    </>
+                  )}
+                </div>
+              </Tooltip>
+            </Polygon>
+            {categoryMarker}
+          </React.Fragment>
         );
       })}
     </>
