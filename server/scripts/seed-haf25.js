@@ -7,8 +7,12 @@
  * If no email provided, uses the first user in the database.
  */
 import mongoose from 'mongoose';
+import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 import Event from '../src/models/Event.js';
 import User from '../src/models/User.js';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'vendor-placer-secret';
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/vendor-placer';
 
@@ -48,10 +52,16 @@ Website: www.HalifaxArtFestival.com`,
   {
     key: 'generalInfo',
     title: 'General Information',
-    content: `JURY AND BOOTH FEES:
-  $40 - Jury Fee (non-refundable)
-  $350 - Juried: Competitive Fine Art booth space
-  $225 - Juried: Non-competing arts and juried craft booth spaces
+    content: `FEES:
+$40 Jury Fee (all applicants pay this fee except the 2024 award winners)
+$350 Competitive Fine Arts Booth Space
+$225 Noncompetitive Artist Booth Space
+$20 Additional Jury Fee after June 30 Deadline
+$35 Bank Fees for returned checks
+
+PAYMENT OPTIONS:
+Credit card payments through the ZAPP application only. Sorry, we can not accept credit card payments by phone.
+If applying through the mail to us, please make your check(s) payable to "Halifax Art Festival." Address noted on the application below.
 
 ARTIST AMENITIES:
 - Branding Image Contest for 2025 Tee Shirt Artist
@@ -88,18 +98,6 @@ APPLICATION REQUIREMENTS:
 - Artist Bio describing background, artwork, and techniques
 - Signature of Agreement to follow Halifax Art Festival Policies
 
-IMPORTANT DATES:
-  June 30th - Application Deadline
-  July 1-5th - Jury Panel Selection
-  July 7th - Artist Invitations begin
-  July 22nd - All payments due to confirm
-  August 1st - Last day for cancellation with 80% refund
-  November 1-2 - Show Dates
-
-PAYMENT OPTIONS:
-- Credit card through ZAPP application only
-- Check payable to "Halifax Art Festival" by mail
-
 FESTIVAL PLACEMENT OF ARTISTS:
 Booth size is 12 x 12 with 2 foot separating between booth spaces.
 
@@ -116,33 +114,23 @@ Corners and 'ends' locations assigned based on artist's total jury panel scores.
   {
     key: 'boothInfo',
     title: 'Booth Information',
-    content: `Booth space is 12 ft by 12 ft with 2 foot separation between spaces.
+    content: `Tents must be professional, 10 x 10 foot with white top canopies and have side curtains for securing tent. The minimum tent weight is 45 lbs. Booth space is 12 ft by 12 ft.
 
-Tents must be professional, 10 x 10 foot with white top canopies and have side curtains for securing tent.
+1. No camping tents allowed.
 
-Tent Weight Requirements:
-- Minimum weight: 40 lbs on each tent leg (60 lbs highly suggested)
-- Permitted: Tube weights, sand bag weights, concrete filled buckets, stabilizer bars with sandbags, weight plates, water weights
-- Not permitted: Visible concrete blocks or bricks, grid only or stabilizer only without weights, dumbbells
+2. Weights are required: Minimum weight (professional) is 40 lbs. each on all tent legs. (Highly suggest 60lbs). Please ensure that your displays are strong enough to withstand crowds, wind, and possible poor weather conditions. Please have weights not distract from the presentation of the booth appearance.
+   Not permitted: visible concrete blocks or bricks, grid only or stabilizer only without weights, dumbbells
+   Permitted: Tube weights, sand bag weights, concrete filled buckets, stabilizer bars with sandbags, weight plates, water weights.
 
-No camping tents allowed.
+3. The booth spaces will be marked using tape or flags. Please refer to festival map for booth layout and numbering.
 
-Setup & Operations:
-- Booth spaces marked using tape or flags
-- Tent set up begins on Friday (phased times to be announced)
-- Saturday morning set up is permitted
-- Exhibitors should be prepared with rain covers, tie-downs, and weights
-- Not all booth locations are totally level - levelling devices may be needed
-- We cannot aid with booth setup
+4. Tent set up begins on Friday. Time for Registration and Set-up will be announced. Saturday morning set up is permitted.
 
-Power & Generators:
-- Power is generally not available to artists
-- The use of generators is prohibited due to disturbance to guests and other exhibitors
+5. Exhibitors should be prepared with rain covers, tie-downs, and weights. Each exhibitor is responsible for his/her own display in case of loss or damage. We recommend that artists carry insurance. Not all booth locations are totally level so levelling devices for displays may be needed. Sorry, but we cannot aid with booth setup.
 
-Tents:
-- We do not provide tents but will assist artists in locating one
-- Each exhibitor is responsible for his/her own display in case of loss or damage
-- We recommend that artists carry insurance`,
+6. Power is generally not available to artists. The use of generators is prohibited by exhibiting artists due to disturbance to guests and other exhibitors.
+
+7. We do not provide tents but we will be happy to assist artists in locating a tent.`,
   },
   {
     key: 'rulesRegulations',
@@ -277,12 +265,55 @@ async function seed() {
 
   const eventName = '64th Annual Halifax Art Festival';
 
+  const KEY_DATES = [
+    { label: 'Application Deadline', date: new Date('2025-06-30'), description: '$20 additional jury fee after this date' },
+    { label: 'Jury Panel Selection', date: new Date('2025-07-01'), description: 'Jury Panel convenes July 1-5' },
+    { label: 'Artist Invitations Begin', date: new Date('2025-07-07'), description: 'Artists notified by email' },
+    { label: 'Payment Due', date: new Date('2025-07-22'), description: 'All payments due to confirm booth space' },
+    { label: 'Cancellation Deadline', date: new Date('2025-08-01'), description: 'Last day for cancellation with 80% refund' },
+    { label: 'Registration & Setup', date: new Date('2025-10-31'), description: 'Friday setup - phased times to be announced' },
+    { label: 'Show Day 1', date: new Date('2025-11-01'), description: 'Festival open to public' },
+    { label: 'Show Day 2', date: new Date('2025-11-02'), description: 'Festival open to public. Breakdown after 4PM' },
+  ];
+
+  // Generate IDs and tokens for vendors (needs eventId, so we do it after finding/creating)
+  function buildVendors(eventId) {
+    return SAMPLE_VENDORS.map((v) => {
+      const id = crypto.randomUUID();
+      const vendorToken = jwt.sign({ eventId: eventId.toString(), vendorId: id, type: 'vendor' }, JWT_SECRET, { expiresIn: '90d' });
+      return {
+        ...v,
+        id,
+        vendorToken,
+        premium: false,
+        booths: v.boothSize || 1,
+        bid: 0,
+        exclusions: [],
+        conflicts: [],
+        spotPreferences: [],
+        insuranceStatus: 'none',
+        appliedAt: new Date('2025-05-15').toISOString(),
+        approvedAt: v.status === 'approved' ? new Date('2025-07-08').toISOString() : undefined,
+        notes: '',
+      };
+    });
+  }
+
   const existing = await Event.findOne({ owner: user._id, name: eventName });
   if (existing) {
     console.log('Halifax Art Festival event already exists, updating...');
+    existing.startDate = new Date('2025-11-01');
+    existing.endDate = new Date('2025-11-02');
+    existing.location = 'Beach Street, Downtown Daytona Beach, FL';
     existing.categories = HAF_CATEGORIES;
     existing.infoSections = INFO_SECTIONS;
-    existing.vendors = SAMPLE_VENDORS;
+    existing.keyDates = KEY_DATES;
+    existing.fees = [
+      { label: 'Jury Fee', amount: 40, description: 'Non-refundable, all applicants (except 2024 award winners)', appliesTo: 'all' },
+      { label: 'Late Jury Fee', amount: 20, description: 'Additional fee for applications after June 30 deadline', appliesTo: 'all' },
+      { label: 'Returned Check Fee', amount: 35, description: 'Bank fees for returned checks', appliesTo: 'all' },
+    ];
+    existing.vendors = buildVendors(existing._id);
     existing.vendorPortal = {
       enabled: true,
       inviteToken: 'haf25-demo',
@@ -296,8 +327,8 @@ async function seed() {
       pricingConfig: {
         mode: 'flat',
         flatFees: {
-          competitive: { single: 350, double: 600, label: 'Competitive Fine Art' },
-          noncompetitive: { single: 225, double: 400, label: 'Non-Competitive / Craft' },
+          competitive: { single: 350, double: 600, label: 'Competitive Fine Arts Booth Space' },
+          noncompetitive: { single: 225, double: 400, label: 'Noncompetitive Artist Booth Space' },
         },
       },
     };
@@ -307,9 +338,18 @@ async function seed() {
     const event = await Event.create({
       owner: user._id,
       name: eventName,
+      startDate: new Date('2025-11-01'),
+      endDate: new Date('2025-11-02'),
+      location: 'Beach Street, Downtown Daytona Beach, FL',
       categories: HAF_CATEGORIES,
       infoSections: INFO_SECTIONS,
-      vendors: SAMPLE_VENDORS,
+      keyDates: KEY_DATES,
+      fees: [
+        { label: 'Jury Fee', amount: 40, description: 'Non-refundable, all applicants (except 2024 award winners)', appliesTo: 'all' },
+        { label: 'Late Jury Fee', amount: 20, description: 'Additional fee for applications after June 30 deadline', appliesTo: 'all' },
+        { label: 'Returned Check Fee', amount: 35, description: 'Bank fees for returned checks', appliesTo: 'all' },
+      ],
+      vendors: [],
       vendorPortal: {
         enabled: true,
         inviteToken: 'haf25-demo',
@@ -321,16 +361,27 @@ async function seed() {
       settings: {
         noSameAdjacentCategories: ['Painting', 'Jewelry', 'Photography', 'Glass', 'Sculpture'],
         pricingConfig: {
-          tiers: {
-            competitive: { base: 350, label: 'Competitive Fine Art' },
-            noncompetitive: { base: 225, label: 'Non-Competitive / Craft' },
+          mode: 'flat',
+          flatFees: {
+            competitive: { single: 350, double: 600, label: 'Competitive Fine Arts Booth Space' },
+            noncompetitive: { single: 225, double: 400, label: 'Noncompetitive Artist Booth Space' },
           },
-          doubleSpaceMultiplier: 1.0,
-          premiumMultiplier: 1.0,
         },
       },
     });
+    event.vendors = buildVendors(event._id);
+    await event.save();
     console.log(`Created event: ${event._id}`);
+  }
+
+  // Log a few demo vendor tokens
+  const savedEvent = await Event.findOne({ owner: user._id, name: eventName });
+  const demoVendors = savedEvent.vendors.filter((v) => v.vendorToken).slice(0, 3);
+  if (demoVendors.length) {
+    console.log(`\nDemo vendor login URLs (paste in browser):`);
+    for (const v of demoVendors) {
+      console.log(`  ${v.name} (${v.status}): /vendor/haf25-demo?token=${v.vendorToken}`);
+    }
   }
 
   console.log(`\nHalifax Art Festival seeded successfully!`);

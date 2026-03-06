@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { fetchPortalInfo, applyToPortal, fetchVendorStatus, updateVendorProfile, cancelVendorApplication } from '../api/index.js';
 
 const DEFAULT_CATEGORIES = ['food', 'art', 'craft', 'jewelry', 'clothing', 'services', 'other'];
@@ -103,14 +103,22 @@ function InfoSectionsDisplay({ sections }) {
 
 export default function VendorPortal() {
   const { inviteToken } = useParams();
+  const [searchParams] = useSearchParams();
   const [portalInfo, setPortalInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [submitted, setSubmitted] = useState(false);
 
-  // Returning vendor state
+  // Returning vendor state — check URL token param first, then localStorage
   const [vendorData, setVendorData] = useState(null);
-  const [vendorToken, setVendorToken] = useState(() => localStorage.getItem(`vt_${inviteToken}`) || null);
+  const [vendorToken, setVendorToken] = useState(() => {
+    const urlToken = searchParams.get('token');
+    if (urlToken) {
+      localStorage.setItem(`vt_${inviteToken}`, urlToken);
+      return urlToken;
+    }
+    return localStorage.getItem(`vt_${inviteToken}`) || null;
+  });
 
   // Form state
   const [form, setForm] = useState({
@@ -344,6 +352,38 @@ export default function VendorPortal() {
         )}
 
         <InfoSectionsDisplay sections={portalInfo?.infoSections} />
+
+        {portalInfo?.fees?.length > 0 && (
+          <div style={{ background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', padding: 16, marginBottom: 20 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: '#1e293b' }}>Fees</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {portalInfo.fees.map((fee, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 10, fontSize: 13 }}>
+                  <span style={{ fontWeight: 700, color: '#1e293b', minWidth: 60 }}>${fee.amount}</span>
+                  <span style={{ fontWeight: 600, color: '#334155' }}>{fee.label}</span>
+                  {fee.description && <span style={{ color: '#64748b' }}>— {fee.description}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {portalInfo?.keyDates?.length > 0 && (
+          <div style={{ background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', padding: 16, marginBottom: 20 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: '#1e293b' }}>Key Dates</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {portalInfo.keyDates.map((kd, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 10, fontSize: 13 }}>
+                  <span style={{ fontWeight: 600, color: '#3b82f6', minWidth: 100, flexShrink: 0 }}>
+                    {new Date(kd.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span>
+                  <span style={{ color: '#1e293b', fontWeight: 600 }}>{kd.label}</span>
+                  {kd.description && <span style={{ color: '#64748b' }}>— {kd.description}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {portalInfo?.signupDeadline && (
           <div style={{ fontSize: 13, color: '#dc2626', marginBottom: 16 }}>

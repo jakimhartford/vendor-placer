@@ -123,6 +123,8 @@ vendorPortalRoutes.get('/:inviteToken', async (req, res) => {
       instructions: event.vendorPortal.instructions || '',
       categories: event.categories || [],
       infoSections: event.infoSections || [],
+      fees: (event.fees || []).map((f) => ({ label: f.label, amount: f.amount, description: f.description, appliesTo: f.appliesTo })),
+      keyDates: (event.keyDates || []).map((kd) => ({ label: kd.label, date: kd.date, description: kd.description })),
       maxSpotChoices: event.vendorPortal.maxSpotChoices || 3,
       signupDeadline: event.vendorPortal.signupDeadline,
       mapReady: hasMap,

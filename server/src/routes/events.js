@@ -61,6 +61,8 @@ eventRoutes.get('/:id', async (req, res) => {
       settings: event.settings,
       categories: event.categories || [],
       infoSections: event.infoSections || [],
+      fees: event.fees || [],
+      keyDates: event.keyDates || [],
       activeLayoutId: event.activeLayoutId,
       layouts: layouts.map((l) => ({
         id: l._id,
@@ -103,7 +105,7 @@ eventRoutes.put('/:id', async (req, res) => {
     const event = await Event.findOne({ _id: req.params.id, owner: req.user.id });
     if (!event) return res.status(404).json({ error: 'Event not found' });
 
-    const { name, settings, infoSections, startDate, endDate, location } = req.body;
+    const { name, settings, infoSections, startDate, endDate, location, keyDates } = req.body;
     if (name) event.name = name;
     if (settings) event.settings = settings;
     if (infoSections) event.infoSections = infoSections;
@@ -111,6 +113,8 @@ eventRoutes.put('/:id', async (req, res) => {
     if (endDate !== undefined) event.endDate = endDate || null;
     if (location !== undefined) event.location = location;
     if (req.body.categories) event.categories = req.body.categories;
+    if (keyDates !== undefined) event.keyDates = keyDates;
+    if (req.body.fees !== undefined) event.fees = req.body.fees;
     await event.save();
 
     return res.json({
@@ -139,6 +143,8 @@ eventRoutes.post('/:id/duplicate', async (req, res) => {
       location: source.location,
       categories: source.categories,
       infoSections: source.infoSections,
+      fees: source.fees || [],
+      keyDates: source.keyDates || [],
       settings: source.settings,
       vendors: includeVendors ? source.vendors.map((v) => ({
         ...v,

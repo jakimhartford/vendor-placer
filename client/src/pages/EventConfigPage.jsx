@@ -33,6 +33,8 @@ export default function EventConfigPage() {
   const [activeSection, setActiveSection] = useState(null);
   const [categories, setCategories] = useState([]);
   const [newCategory, setNewCategory] = useState('');
+  const [keyDates, setKeyDates] = useState([]);
+  const [fees, setFees] = useState([]);
 
   useEffect(() => {
     setLoading(true);
@@ -43,6 +45,11 @@ export default function EventConfigPage() {
         setEndDate(ev.endDate ? new Date(ev.endDate).toISOString().slice(0, 10) : '');
         setLocation(ev.location || '');
         setCategories(ev.categories || []);
+        setKeyDates((ev.keyDates || []).map((kd) => ({
+          ...kd,
+          date: kd.date ? new Date(kd.date).toISOString().slice(0, 10) : '',
+        })));
+        setFees(ev.fees || []);
         setInfoSections(ev.infoSections || []);
         if (ev.infoSections?.length) setActiveSection(ev.infoSections[0].key);
       })
@@ -64,6 +71,17 @@ export default function EventConfigPage() {
         endDate: endDate || null,
         location,
         categories,
+        keyDates: keyDates.filter((kd) => kd.label && kd.date).map((kd) => ({
+          label: kd.label,
+          date: kd.date || null,
+          description: kd.description || '',
+        })),
+        fees: fees.filter((f) => f.label && f.amount).map((f) => ({
+          label: f.label,
+          amount: parseFloat(f.amount) || 0,
+          description: f.description || '',
+          appliesTo: f.appliesTo || 'all',
+        })),
         infoSections,
       });
       setSaved(true);
@@ -73,7 +91,7 @@ export default function EventConfigPage() {
     } finally {
       setSaving(false);
     }
-  }, [eventId, name, startDate, endDate, location, categories, infoSections]);
+  }, [eventId, name, startDate, endDate, location, categories, keyDates, fees, infoSections]);
 
   // Keyboard shortcut: Cmd+S to save
   useEffect(() => {
@@ -246,6 +264,129 @@ export default function EventConfigPage() {
               Add
             </button>
           </div>
+        </div>
+
+        {/* Key dates */}
+        <div style={{
+          background: '#1e293b', borderRadius: 12, border: '1px solid #334155',
+          padding: 24, marginBottom: 24,
+        }}>
+          <h2 style={{ margin: '0 0 4px', fontSize: 18 }}>Key Dates</h2>
+          <p style={{ margin: '0 0 16px', fontSize: 13, color: '#64748b' }}>
+            Important dates shown to vendors on the portal. Future alert support coming soon.
+          </p>
+
+          {keyDates.map((kd, i) => (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 140px 2fr auto', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+              <input
+                value={kd.label}
+                onChange={(e) => { setKeyDates((prev) => prev.map((d, j) => j === i ? { ...d, label: e.target.value } : d)); setSaved(false); }}
+                placeholder="Label (e.g., Application Deadline)"
+                style={inputStyle}
+              />
+              <input
+                type="date"
+                value={kd.date}
+                onChange={(e) => { setKeyDates((prev) => prev.map((d, j) => j === i ? { ...d, date: e.target.value } : d)); setSaved(false); }}
+                style={inputStyle}
+              />
+              <input
+                value={kd.description || ''}
+                onChange={(e) => { setKeyDates((prev) => prev.map((d, j) => j === i ? { ...d, description: e.target.value } : d)); setSaved(false); }}
+                placeholder="Description (optional)"
+                style={inputStyle}
+              />
+              <button
+                onClick={() => { setKeyDates((prev) => prev.filter((_, j) => j !== i)); setSaved(false); }}
+                style={{
+                  background: 'none', border: 'none', color: '#64748b',
+                  cursor: 'pointer', fontSize: 18, padding: '0 4px', lineHeight: 1,
+                }}
+                title="Remove"
+              >
+                &times;
+              </button>
+            </div>
+          ))}
+
+          <button
+            onClick={() => { setKeyDates((prev) => [...prev, { label: '', date: '', description: '' }]); setSaved(false); }}
+            style={{
+              padding: '8px 16px', fontSize: 13, fontWeight: 600,
+              background: '#334155', color: '#e2e8f0', border: 'none',
+              borderRadius: 6, cursor: 'pointer',
+            }}
+          >
+            + Add Date
+          </button>
+        </div>
+
+        {/* Application / Event Fees */}
+        <div style={{
+          background: '#1e293b', borderRadius: 12, border: '1px solid #334155',
+          padding: 24, marginBottom: 24,
+        }}>
+          <h2 style={{ margin: '0 0 4px', fontSize: 18 }}>Application & Event Fees</h2>
+          <p style={{ margin: '0 0 16px', fontSize: 13, color: '#64748b' }}>
+            Non-booth fees (jury fees, late fees, etc.). Booth pricing is configured separately in Pricing Config.
+          </p>
+
+          {fees.map((fee, i) => (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 90px 2fr 120px auto', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+              <input
+                value={fee.label}
+                onChange={(e) => { setFees((prev) => prev.map((f, j) => j === i ? { ...f, label: e.target.value } : f)); setSaved(false); }}
+                placeholder="Fee name"
+                style={inputStyle}
+              />
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: 14 }}>$</span>
+                <input
+                  type="number"
+                  value={fee.amount || ''}
+                  onChange={(e) => { setFees((prev) => prev.map((f, j) => j === i ? { ...f, amount: e.target.value } : f)); setSaved(false); }}
+                  placeholder="0"
+                  style={{ ...inputStyle, paddingLeft: 24 }}
+                />
+              </div>
+              <input
+                value={fee.description || ''}
+                onChange={(e) => { setFees((prev) => prev.map((f, j) => j === i ? { ...f, description: e.target.value } : f)); setSaved(false); }}
+                placeholder="Description (optional)"
+                style={inputStyle}
+              />
+              <select
+                value={fee.appliesTo || 'all'}
+                onChange={(e) => { setFees((prev) => prev.map((f, j) => j === i ? { ...f, appliesTo: e.target.value } : f)); setSaved(false); }}
+                style={inputStyle}
+              >
+                <option value="all">All vendors</option>
+                <option value="competitive">Competitive</option>
+                <option value="noncompetitive">Non-competitive</option>
+              </select>
+              <button
+                onClick={() => { setFees((prev) => prev.filter((_, j) => j !== i)); setSaved(false); }}
+                style={{
+                  background: 'none', border: 'none', color: '#64748b',
+                  cursor: 'pointer', fontSize: 18, padding: '0 4px', lineHeight: 1,
+                }}
+                title="Remove"
+              >
+                &times;
+              </button>
+            </div>
+          ))}
+
+          <button
+            onClick={() => { setFees((prev) => [...prev, { label: '', amount: '', description: '', appliesTo: 'all' }]); setSaved(false); }}
+            style={{
+              padding: '8px 16px', fontSize: 13, fontWeight: 600,
+              background: '#334155', color: '#e2e8f0', border: 'none',
+              borderRadius: 6, cursor: 'pointer',
+            }}
+          >
+            + Add Fee
+          </button>
         </div>
 
         {/* Info sections — sidebar nav + editor */}

@@ -7,8 +7,12 @@
  * If no email provided, uses the first user in the database.
  */
 import mongoose from 'mongoose';
+import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 import Event from '../src/models/Event.js';
 import User from '../src/models/User.js';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'vendor-placer-secret';
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/vendor-placer';
 
@@ -272,13 +276,35 @@ async function seed() {
 
   console.log(`Seeding for user: ${user.email}`);
 
+  function buildVendors(eventId) {
+    return SAMPLE_VENDORS.map((v) => {
+      const id = crypto.randomUUID();
+      const vendorToken = jwt.sign({ eventId: eventId.toString(), vendorId: id, type: 'vendor' }, JWT_SECRET, { expiresIn: '90d' });
+      return {
+        ...v,
+        id,
+        vendorToken,
+        premium: false,
+        booths: v.boothSize || 1,
+        bid: 0,
+        exclusions: [],
+        conflicts: [],
+        spotPreferences: [],
+        insuranceStatus: 'none',
+        appliedAt: new Date('2026-01-10').toISOString(),
+        approvedAt: v.status === 'approved' ? new Date('2026-02-01').toISOString() : undefined,
+        notes: '',
+      };
+    });
+  }
+
   // Check if event already exists
   const existing = await Event.findOne({ owner: user._id, name: 'DBAF26: Daytona Beach Arts Fest' });
   if (existing) {
     console.log('DBAF26 event already exists, updating...');
     existing.categories = DBAF_CATEGORIES;
     existing.infoSections = INFO_SECTIONS;
-    existing.vendors = SAMPLE_VENDORS;
+    existing.vendors = buildVendors(existing._id);
     existing.vendorPortal = {
       enabled: true,
       inviteToken: 'dbaf26-demo',
@@ -306,7 +332,7 @@ async function seed() {
       name: 'DBAF26: Daytona Beach Arts Fest',
       categories: DBAF_CATEGORIES,
       infoSections: INFO_SECTIONS,
-      vendors: SAMPLE_VENDORS,
+      vendors: [],
       vendorPortal: {
         enabled: true,
         inviteToken: 'dbaf26-demo',
@@ -328,7 +354,19 @@ async function seed() {
         },
       },
     });
+    event.vendors = buildVendors(event._id);
+    await event.save();
     console.log(`Created event: ${event._id}`);
+  }
+
+  // Log demo vendor tokens
+  const savedEvent = await Event.findOne({ owner: user._id, name: 'DBAF26: Daytona Beach Arts Fest' });
+  const demoVendors = savedEvent.vendors.filter((v) => v.vendorToken).slice(0, 3);
+  if (demoVendors.length) {
+    console.log(`\nDemo vendor login URLs (paste in browser):`);
+    for (const v of demoVendors) {
+      console.log(`  ${v.name} (${v.status}): /vendor/dbaf26-demo?token=${v.vendorToken}`);
+    }
   }
 
   console.log(`\nDBaf26 seeded successfully!`);

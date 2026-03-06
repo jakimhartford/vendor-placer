@@ -36,6 +36,23 @@ const eventSchema = new mongoose.Schema({
     noSameAdjacentCategories: { type: [String], default: ['art', 'craft', 'jewelry', 'clothing'] },
     pricingConfig: { type: Object, default: null },
   },
+  fees: {
+    type: [{
+      label: { type: String, required: true },
+      amount: { type: Number, required: true },
+      description: { type: String, default: '' },
+      appliesTo: { type: String, default: 'all' }, // 'all', 'competitive', 'noncompetitive', etc.
+    }],
+    default: [],
+  },
+  keyDates: {
+    type: [{
+      label: { type: String, required: true },
+      date: { type: Date, required: true },
+      description: { type: String, default: '' },
+    }],
+    default: [],
+  },
   categories: {
     type: [String],
     default: ['food', 'art', 'craft', 'jewelry', 'clothing', 'services', 'other'],

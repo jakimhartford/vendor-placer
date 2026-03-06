@@ -11,7 +11,7 @@ const labelStyle = { fontSize: 9, color: '#64748b', display: 'block', textTransf
 
 export default function PricingConfig({ config, onChange }) {
   const [expanded, setExpanded] = useState(false);
-  const cfg = config || DEFAULT_PRICING_CONFIG;
+  const cfg = { ...DEFAULT_PRICING_CONFIG, ...config };
   const mode = cfg.mode || 'multiplier';
 
   const update = (changes) => onChange({ ...cfg, ...changes });
