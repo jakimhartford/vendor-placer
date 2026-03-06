@@ -4,14 +4,8 @@ import L from 'leaflet';
 
 /**
  * Lucidchart-style selection handles for a polygon zone.
- * Shows: bounding outline, 4 corner drag handles (squares),
- * and a rotation handle (circle above top edge).
- *
- * Props:
- *   polygon  – [[lat, lng], ...] (4 corners)
- *   color    – stroke color for the selection outline
- *   onUpdate – (newPolygon) => void
- *   onClose  – () => void  (called on Escape or click-away)
+ * Corner handles scale the shape proportionally (opposite corner anchored).
+ * Rotation handle (curved arrow) above the top edge.
  */
 export default function ZoneHandles({ polygon, color, onUpdate, onClose }) {
   const map = useMap();
@@ -19,11 +13,12 @@ export default function ZoneHandles({ polygon, color, onUpdate, onClose }) {
   const cornersRef = useRef([...polygon]);
   const handleMarkersRef = useRef([]);
   const rotateMarkerRef = useRef(null);
-  const rotateLineRef = useRef(null);
   const rotatingRef = useRef(false);
-  const rotateStartAngleRef = useRef(0);
   const baseAngleRef = useRef(0);
   const baseCornersRef = useRef(null);
+  // For proportional corner scaling
+  const dragAnchorRef = useRef(null);
+  const dragBaseCornersRef = useRef(null);
 
   const getCenter = useCallback((pts) => {
     const lat = pts.reduce((s, p) => s + p[0], 0) / pts.length;
@@ -32,13 +27,12 @@ export default function ZoneHandles({ polygon, color, onUpdate, onClose }) {
   }, []);
 
   const getRotateHandlePos = useCallback((pts) => {
-    // Position above the top-most point
     const topIdx = pts.reduce((best, p, i) => (p[0] > pts[best][0] ? i : best), 0);
     const top = pts[topIdx];
     const center = getCenter(pts);
-    // Offset further from center, above the top point
-    const offsetLat = (top[0] - center[0]) * 0.4;
-    return [top[0] + Math.abs(offsetLat) + 0.00015, (pts[topIdx][1] + center[1]) / 2 + (top[1] - center[1]) * 0.2];
+    const dist = Math.abs(top[0] - center[0]);
+    // Small offset just above the top point
+    return [top[0] + dist * 0.3 + 0.00008, top[1]];
   }, [getCenter]);
 
   const cornerIcon = L.divIcon({
@@ -48,11 +42,19 @@ export default function ZoneHandles({ polygon, color, onUpdate, onClose }) {
     iconAnchor: [5, 5],
   });
 
+  // Curved double-sided arrow for rotation
   const rotateIcon = L.divIcon({
     className: '',
-    html: `<div style="width:14px;height:14px;background:#fff;border:2px solid ${color};border-radius:50%;cursor:grab;display:flex;align-items:center;justify-content:center;font-size:9px;">↻</div>`,
-    iconSize: [14, 14],
-    iconAnchor: [7, 7],
+    html: `<div style="
+      width:20px;height:20px;border-radius:50%;
+      border:2px solid ${color};border-bottom-color:transparent;
+      position:relative;cursor:grab;background:rgba(255,255,255,0.9);
+    ">
+      <div style="position:absolute;top:-2px;right:-1px;font-size:8px;line-height:1;color:${color};">▶</div>
+      <div style="position:absolute;bottom:-2px;left:-1px;font-size:8px;line-height:1;color:${color};transform:rotate(180deg);">▶</div>
+    </div>`,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
   });
 
   const updateVisuals = useCallback(() => {
@@ -63,10 +65,7 @@ export default function ZoneHandles({ polygon, color, onUpdate, onClose }) {
     });
     const rotPos = getRotateHandlePos(pts);
     if (rotateMarkerRef.current) rotateMarkerRef.current.setLatLng(rotPos);
-    const center = getCenter(pts);
-    const topIdx = pts.reduce((best, p, i) => (p[0] > pts[best][0] ? i : best), 0);
-    if (rotateLineRef.current) rotateLineRef.current.setLatLngs([pts[topIdx], rotPos]);
-  }, [getCenter, getRotateHandlePos]);
+  }, [getRotateHandlePos]);
 
   const rotatePts = useCallback((pts, center, angleDeg) => {
     const rad = (angleDeg * Math.PI) / 180;
@@ -82,17 +81,34 @@ export default function ZoneHandles({ polygon, color, onUpdate, onClose }) {
     });
   }, []);
 
+  // Scale polygon proportionally: anchor is the opposite corner, dragged corner
+  // moves to new position, all other corners scale relative to anchor.
+  const scalePts = useCallback((basePts, anchorIdx, dragIdx, newDragPos) => {
+    const anchor = basePts[anchorIdx];
+    const oldDrag = basePts[dragIdx];
+    const oldDx = oldDrag[1] - anchor[1];
+    const oldDy = oldDrag[0] - anchor[0];
+    const newDx = newDragPos[1] - anchor[1];
+    const newDy = newDragPos[0] - anchor[0];
+    const sx = oldDx !== 0 ? newDx / oldDx : 1;
+    const sy = oldDy !== 0 ? newDy / oldDy : 1;
+    return basePts.map(([lat, lng]) => [
+      anchor[0] + (lat - anchor[0]) * sy,
+      anchor[1] + (lng - anchor[1]) * sx,
+    ]);
+  }, []);
+
   useEffect(() => {
     if (!map || !polygon?.length) return;
 
     cornersRef.current = [...polygon];
 
-    // Selection outline (dashed blue)
+    // Selection outline
     outlineRef.current = L.polygon(polygon, {
       color, weight: 1.5, fill: false, dashArray: '4,3', interactive: false,
     }).addTo(map);
 
-    // Corner handles
+    // Corner handles — proportional scaling
     polygon.forEach((pt, idx) => {
       const marker = L.marker(pt, {
         draggable: true,
@@ -100,13 +116,28 @@ export default function ZoneHandles({ polygon, color, onUpdate, onClose }) {
         zIndexOffset: 1000,
       }).addTo(map);
 
+      const oppositeIdx = (idx + 2) % polygon.length;
+
+      marker.on('dragstart', () => {
+        dragAnchorRef.current = oppositeIdx;
+        dragBaseCornersRef.current = [...cornersRef.current];
+      });
+
       marker.on('drag', (e) => {
+        if (dragBaseCornersRef.current == null) return;
         const ll = e.target.getLatLng();
-        cornersRef.current[idx] = [ll.lat, ll.lng];
+        cornersRef.current = scalePts(
+          dragBaseCornersRef.current,
+          dragAnchorRef.current,
+          idx,
+          [ll.lat, ll.lng],
+        );
         updateVisuals();
       });
 
       marker.on('dragend', () => {
+        dragAnchorRef.current = null;
+        dragBaseCornersRef.current = null;
         onUpdate([...cornersRef.current]);
       });
 
@@ -115,11 +146,6 @@ export default function ZoneHandles({ polygon, color, onUpdate, onClose }) {
 
     // Rotation handle
     const rotPos = getRotateHandlePos(polygon);
-    const topIdx = polygon.reduce((best, p, i) => (p[0] > polygon[best][0] ? i : best), 0);
-
-    rotateLineRef.current = L.polyline([polygon[topIdx], rotPos], {
-      color, weight: 1, dashArray: '3,3', interactive: false,
-    }).addTo(map);
 
     rotateMarkerRef.current = L.marker(rotPos, {
       draggable: true,
@@ -166,8 +192,6 @@ export default function ZoneHandles({ polygon, color, onUpdate, onClose }) {
       outlineRef.current = null;
       if (rotateMarkerRef.current) map.removeLayer(rotateMarkerRef.current);
       rotateMarkerRef.current = null;
-      if (rotateLineRef.current) map.removeLayer(rotateLineRef.current);
-      rotateLineRef.current = null;
     };
   }, [map, polygon]); // eslint-disable-line react-hooks/exhaustive-deps
 
