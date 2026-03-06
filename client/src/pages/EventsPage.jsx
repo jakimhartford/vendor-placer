@@ -35,8 +35,9 @@ export default function EventsPage() {
 
   const handleDuplicate = async (e, id, name) => {
     e.stopPropagation();
+    const includeLayouts = confirm('Include layouts (map designs) from the original event?');
     const includeVendors = confirm('Include vendors from the original event?');
-    await duplicateEvent(id, { includeVendors });
+    await duplicateEvent(id, { includeVendors, includeLayouts });
     await load();
   };
 
@@ -143,7 +144,20 @@ export default function EventsPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <h2 style={{ margin: 0, fontSize: 18 }}>{ev.name}</h2>
-                  <div style={{ display: 'flex', gap: 16, marginTop: 6 }}>
+                  {(ev.startDate || ev.location) && (
+                    <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
+                      {ev.startDate && (
+                        <span style={{ fontSize: 12, color: '#94a3b8' }}>
+                          {new Date(ev.startDate).toLocaleDateString()}
+                          {ev.endDate && ` \u2013 ${new Date(ev.endDate).toLocaleDateString()}`}
+                        </span>
+                      )}
+                      {ev.location && (
+                        <span style={{ fontSize: 12, color: '#94a3b8' }}>{ev.location}</span>
+                      )}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: 16, marginTop: 4 }}>
                     <span style={{ fontSize: 12, color: '#64748b' }}>
                       {ev.vendorCount || 0} vendors
                     </span>

@@ -27,6 +27,9 @@ export default function EventDashboardPage() {
   const [activeTab, setActiveTab] = useState('layouts');
   const [infoSections, setInfoSections] = useState([]);
   const [expandedSections, setExpandedSections] = useState({});
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [location, setLocation] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -37,6 +40,9 @@ export default function EventDashboardPage() {
       ]);
       setEvent(ev);
       setEventName(ev.name);
+      setStartDate(ev.startDate ? new Date(ev.startDate).toISOString().slice(0, 10) : '');
+      setEndDate(ev.endDate ? new Date(ev.endDate).toISOString().slice(0, 10) : '');
+      setLocation(ev.location || '');
       setInfoSections(ev.infoSections || []);
       setLayouts(lays);
     } catch {
@@ -150,6 +156,43 @@ export default function EventDashboardPage() {
                 {event?.name}
               </h1>
             )}
+            <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                onBlur={() => updateEvent(eventId, { startDate: startDate || null, endDate: endDate || null })}
+                style={{
+                  padding: '3px 8px', fontSize: 12, background: '#16213e', color: '#e2e8f0',
+                  border: '1px solid #334155', borderRadius: 4, width: 130,
+                }}
+                title="Start date"
+              />
+              <span style={{ fontSize: 12, color: '#475569' }}>to</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                onBlur={() => updateEvent(eventId, { startDate: startDate || null, endDate: endDate || null })}
+                style={{
+                  padding: '3px 8px', fontSize: 12, background: '#16213e', color: '#e2e8f0',
+                  border: '1px solid #334155', borderRadius: 4, width: 130,
+                }}
+                title="End date"
+              />
+              <input
+                type="text"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                onBlur={() => updateEvent(eventId, { location })}
+                placeholder="Location..."
+                style={{
+                  padding: '3px 8px', fontSize: 12, background: '#16213e', color: '#e2e8f0',
+                  border: '1px solid #334155', borderRadius: 4, flex: 1, minWidth: 150,
+                }}
+                title="Event location"
+              />
+            </div>
             <div style={{ display: 'flex', gap: 16, marginTop: 6 }}>
               <span style={{ fontSize: 12, color: '#64748b' }}>
                 {event?.vendors?.length || 0} vendors

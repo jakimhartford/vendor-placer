@@ -10,7 +10,7 @@ export const eventRoutes = Router();
 eventRoutes.get('/', async (req, res) => {
   try {
     const events = await Event.find({ owner: req.user.id })
-      .select('name createdAt updatedAt activeLayoutId vendors')
+      .select('name startDate endDate location createdAt updatedAt activeLayoutId vendors')
       .sort({ updatedAt: -1 });
 
     const summaries = await Promise.all(events.map(async (e) => {
@@ -18,6 +18,9 @@ eventRoutes.get('/', async (req, res) => {
       return {
         id: e._id,
         name: e.name,
+        startDate: e.startDate,
+        endDate: e.endDate,
+        location: e.location,
         vendorCount: e.vendors?.length || 0,
         layoutCount,
         activeLayoutId: e.activeLayoutId,
@@ -50,6 +53,9 @@ eventRoutes.get('/:id', async (req, res) => {
     return res.json({
       id: event._id,
       name: event.name,
+      startDate: event.startDate,
+      endDate: event.endDate,
+      location: event.location,
       vendors: event.vendors,
       vendorPortal: event.vendorPortal || null,
       settings: event.settings,
@@ -96,10 +102,13 @@ eventRoutes.put('/:id', async (req, res) => {
     const event = await Event.findOne({ _id: req.params.id, owner: req.user.id });
     if (!event) return res.status(404).json({ error: 'Event not found' });
 
-    const { name, settings, infoSections } = req.body;
+    const { name, settings, infoSections, startDate, endDate, location } = req.body;
     if (name) event.name = name;
     if (settings) event.settings = settings;
     if (infoSections) event.infoSections = infoSections;
+    if (startDate !== undefined) event.startDate = startDate || null;
+    if (endDate !== undefined) event.endDate = endDate || null;
+    if (location !== undefined) event.location = location;
     await event.save();
 
     return res.json({
@@ -118,14 +127,14 @@ eventRoutes.post('/:id/duplicate', async (req, res) => {
     const source = await Event.findOne({ _id: req.params.id, owner: req.user.id });
     if (!source) return res.status(404).json({ error: 'Event not found' });
 
-    const { includeVendors } = req.body || {};
+    const { includeVendors, includeLayouts } = req.body || {};
 
-    // Generate new name (e.g., "DBAF26" -> "DBAF26 (Copy)" or user can rename)
     const newName = req.body.name || `${source.name} (Copy)`;
 
     const duplicate = await Event.create({
       owner: req.user.id,
       name: newName,
+      location: source.location,
       infoSections: source.infoSections,
       settings: source.settings,
       vendors: includeVendors ? source.vendors.map((v) => ({
@@ -143,6 +152,27 @@ eventRoutes.post('/:id/duplicate', async (req, res) => {
         requirePayment: source.vendorPortal?.requirePayment || false,
       },
     });
+
+    // Copy layouts if requested
+    if (includeLayouts) {
+      const sourceLayouts = await Layout.find({ event: source._id });
+      for (const sl of sourceLayouts) {
+        await Layout.create({
+          event: duplicate._id,
+          name: sl.name,
+          spotsGeoJSON: sl.spotsGeoJSON,
+          deadZones: sl.deadZones,
+          paths: sl.paths,
+          mapCenter: sl.mapCenter,
+          zoom: sl.zoom,
+          amenities: sl.amenities,
+          accessPoints: sl.accessPoints,
+          timeWindows: sl.timeWindows,
+          mapZones: sl.mapZones,
+          // Don't copy placements since vendors may differ
+        });
+      }
+    }
 
     return res.json({
       id: duplicate._id,

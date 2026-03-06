@@ -12,6 +12,9 @@ const eventSchema = new mongoose.Schema({
     required: true,
     default: 'Untitled Event',
   },
+  startDate: { type: Date, default: null },
+  endDate: { type: Date, default: null },
+  location: { type: String, default: '' },
   vendors: {
     type: [Object],
     default: [],
