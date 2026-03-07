@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { MapContainer, TileLayer, Polygon, Tooltip } from 'react-leaflet';
 import useCheckIn from '../hooks/useCheckIn.js';
-import { GOOGLE_TILE_STYLES } from '../utils/constants.js';
+import { MAP_TILE_STYLES } from '../utils/constants.js';
 
 function featureToPositions(feature) {
   const coords = feature.geometry.coordinates[0];
@@ -203,7 +203,7 @@ export default function CheckInPage() {
         >
           <TileLayer
             attribution='&copy; Google Maps'
-            url={GOOGLE_TILE_STYLES.streets.url}
+            url={MAP_TILE_STYLES.streets.url}
             maxZoom={22}
           />
 

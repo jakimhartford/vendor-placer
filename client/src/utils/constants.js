@@ -17,17 +17,20 @@ export const TIERS = ['platinum', 'gold', 'silver', 'bronze'];
 /** Spot size in meters (12 feet) */
 export const SPOT_SIZE_METERS = 3.66;
 
-export const GOOGLE_TILE_STYLES = {
+export const MAP_TILE_STYLES = {
   satellite: {
-    url: 'https://mt1.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: '&copy; Esri, Maxar, Earthstar Geographics',
     label: 'Satellite',
+  },
+  hybrid: {
+    url: 'https://mt1.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',
+    attribution: '&copy; Google Maps',
+    label: 'Hybrid',
   },
   streets: {
     url: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+    attribution: '&copy; Google Maps',
     label: 'Streets',
-  },
-  terrain: {
-    url: 'https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
-    label: 'Terrain',
   },
 };

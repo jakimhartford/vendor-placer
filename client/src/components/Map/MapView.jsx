@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Polygon, Popup, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { MAP_CENTER, DEFAULT_ZOOM, GOOGLE_TILE_STYLES } from '../../utils/constants.js';
+import { MAP_CENTER, DEFAULT_ZOOM, MAP_TILE_STYLES } from '../../utils/constants.js';
 import SpotLayer, { featureCenter } from './SpotLayer.jsx';
 import DrawToolbar from './DrawToolbar.jsx';
 import FitBounds from './FitBounds.jsx';
@@ -52,7 +52,7 @@ export default function MapView({
     ? featureCenter(editingSpot)
     : null;
 
-  const tileConfig = GOOGLE_TILE_STYLES[mapStyle];
+  const tileConfig = MAP_TILE_STYLES[mapStyle];
 
   return (
     <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }}>
@@ -68,7 +68,7 @@ export default function MapView({
       <MapSizeInvalidator />
       <TileLayer
         key={mapStyle}
-        attribution='&copy; Google Maps'
+        attribution={tileConfig.attribution}
         url={tileConfig.url}
         maxZoom={22}
       />
@@ -77,7 +77,7 @@ export default function MapView({
         display: 'flex', gap: 4, background: '#1e293b', borderRadius: 6, padding: 3,
         boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
       }}>
-        {Object.entries(GOOGLE_TILE_STYLES).map(([key, style]) => (
+        {Object.entries(MAP_TILE_STYLES).map(([key, style]) => (
           <button
             key={key}
             onClick={() => setMapStyle(key)}
